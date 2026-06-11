@@ -1,0 +1,19 @@
+# Variáveis por host de exemplo — copie para inventory/host_vars.yml (ignorado pelo Git).
+# Sem senhas. Apenas configuração não sensível.
+
+hostname: lasdpc-pi-display-01
+timezone: America/Sao_Paulo
+locale: pt_BR.UTF-8
+keyboard_layout: br
+
+display:
+  width: 1920
+  height: 1080
+  orientation: normal      # normal | left | right | inverted
+
+dashboard_url: "http://CHANGE-ME:3000"
+
+storage: microsd           # microsd | ssd_usb
+ram_gb: 0                  # 0 = detectar automaticamente na inspeção
+
+initial_mode: dashboard    # dashboard | media | games | desktop

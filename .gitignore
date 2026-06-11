@@ -1,0 +1,53 @@
+# ==== Segredos e credenciais (NUNCA versionar) ====
+.env
+*.env
+!*.env.example
+docker/.env
+secrets/
+*.secret
+*.key
+*.pem
+id_*
+*_rsa
+*_ed25519
+known_hosts
+
+# ==== Inventário real (contém IP/usuário reais) ====
+inventory/hosts.ini
+inventory/host_vars.yml
+
+# ==== Dados persistentes e runtime ====
+docker/*/data/*
+!docker/*/data/.gitkeep
+docker/mosquitto/log/*
+!docker/mosquitto/log/.gitkeep
+remote/backups/*
+!remote/backups/.gitkeep
+
+# ==== Backups e relatórios gerados ====
+*.tar.gz
+*.tar.zst
+*.bak
+*.backup
+logs/*
+!logs/.gitkeep
+
+# ==== ROMs, BIOS e mídia (legal/grandes — nunca versionar) ====
+roms/
+bios/
+media/
+*.iso
+*.img
+*.zip
+*.7z
+*.chd
+*.bin
+*.cue
+
+# ==== Lixo de SO/editor ====
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.vscode/
+.idea/
