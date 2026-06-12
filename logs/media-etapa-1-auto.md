@@ -29,3 +29,25 @@ UxPlay usa `UXPLAY_VIDEO_SINK=0` por padrão nesta etapa. Isso valida AirPlay á
 - TC-1.7 MANUAL: operador testar AirPlay de música por 5 min.
 - TC-1.8 MANUAL: operador testar Spotify Connect por 5 min com conta Premium.
 - TC-1.9 AUTO: reboot e repetição de Raspotify/mDNS após boot.
+
+## TC-1.9 pós-reboot
+
+Após `sudo systemctl reboot`, a Pi voltou via Tailscale e os checks passaram:
+
+- `raspotify`: active.
+- `_spotify-connect._tcp`: anunciado como `TV LASDPC lasdpc-pi-display-01`.
+- `lasdpc-mode media`: `lasdpc-media.target` active e `uxplay.service` active.
+- `_raop._tcp`: anunciado como `D83ADD11113F@TV LASDPC lasdpc-pi-display-01`.
+- `lasdpc-mode menu`: `uxplay.service` volta para inactive.
+- Docker IoT: 5/5 healthy após estabilização.
+- Menu: HTTP 200.
+- Tailscale: conectado.
+- Throttling: `throttled=0x0`.
+- Temperatura pós-check: 64.7 C.
+
+TC-1.9: PASS.
+
+Pendências restantes da Etapa 1:
+
+- TC-1.7 MANUAL: AirPlay de música por 5 min.
+- TC-1.8 MANUAL: Spotify Connect por 5 min com conta Premium.
