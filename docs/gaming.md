@@ -54,6 +54,18 @@ Depois abra `Emulador` no menu e carregue o arquivo pelo ares.
 
 ## Alternativa recomendada
 
+Para a imagem principal Debian/Trixie com dashboard, desktop e menu, a melhor direcao e trocar o uso direto do `ares` por um frontend de TV, preferencialmente ES-DE ou Pegasus, e deixar os emuladores por sistema como dependencias opcionais. O `ares` continua util como emulador multi-sistema instalado por apt, mas a UX dele e de aplicativo desktop, nao de console de sala.
+
+Opcoes avaliadas:
+
+| Opcao | Encaixe no projeto | Observacao |
+|---|---|---|
+| ES-DE | Melhor candidato para modo `games` na imagem atual | Frontend moderno, controle por gamepad, AppImage AArch64 oficial, suporte amplo a sistemas |
+| Pegasus | Alternativa leve e customizavel | Tem builds para Raspberry Pi e compatibilidade com metadados EmulationStation |
+| Batocera | Melhor experiencia dedicada de retrogaming | Excelente se a estacao for de jogos, mas e outra imagem/OS |
+| Recalbox | Alternativa dedicada com Kodi | Tambem exige tratar a estacao como console dedicado |
+| RetroPie | Nao recomendado nesta base | Suporte Trixie ainda nao e uma base segura para esta imagem |
+
 Para uma experiencia console dedicada, ainda e melhor usar uma unidade separada com Batocera ou Recalbox. Isso evita misturar dependencias de emulacao com o sistema principal IoT/kiosk.
 
 Procedimento seguro:
@@ -66,6 +78,8 @@ Procedimento seguro:
 ## Limites esperados da Pi 4
 
 Sistemas 8/16-bit e muitos consoles 32-bit tendem a funcionar bem. N64, Dreamcast, PSP e Saturn variam por jogo, emulador, resolucao e refrigeracao. Nao foi feito overclock inicial.
+
+Para Ocarina of Time especificamente, a meta tecnica deve ser validada com ROM legal no hardware real antes de declarar suporte. A Pi 4 pode rodar N64 em alguns cenarios, mas desempenho e audio variam bastante conforme core/emulador, resolucao e driver grafico.
 
 ## Conteudo legal
 

@@ -29,9 +29,13 @@ Nao ha servico HTTP na porta 80. Use portas explicitas, por exemplo `http://100.
 | Dashboard | `lasdpc-mode dashboard` | Homepage IoT em Chromium kiosk (`localhost:8080`) |
 | Media | `lasdpc-mode media` | Kodi standalone |
 | Desktop | `lasdpc-mode desktop` | Desktop labwc normal |
-| Games | `lasdpc-mode games` | Reservado para EmulationStation; bloqueado enquanto RetroPie for incompativel |
+| Games | `lasdpc-mode games` | EmulationStation se existir; caso contrario `ares` |
 
-O runner `lasdpc-session` e iniciado pelo autostart do labwc. Ele le `~/.config/lasdpc/mode` e mantem o app do modo atual. Ao sair do Kodi, o runner volta automaticamente para `menu`.
+O runner `lasdpc-session` e iniciado pelo autostart do usuario labwc. O autostart global do Raspberry Pi OS continua responsavel por painel, desktop e kanshi; o autostart do projeto adiciona apenas o runner para evitar barras duplicadas.
+
+Ele le `~/.config/lasdpc/mode` e mantem o app do modo atual. Ao sair do Kodi ou do emulador, o runner volta automaticamente para `menu`.
+
+O modo `dashboard` usa `DASHBOARD_URL` em `~/.config/lasdpc/session.env`. A lista editavel pelo menu fica em `~/.config/lasdpc/dashboards.json`.
 
 ## Stack IoT
 

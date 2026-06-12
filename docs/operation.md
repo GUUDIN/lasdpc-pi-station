@@ -29,6 +29,31 @@ Use Tailscale como caminho primario. O IP LAN `10.0.1.218` so funciona quando a 
 
 `http://100.84.255.77` sem porta nao responde porque nao existe servico na porta 80.
 
+## Dashboards
+
+O menu central tem a entrada `Dashboards`. Por ela e possivel selecionar a URL padrao do modo `dashboard` e cadastrar outras URLs sem SSH.
+
+Opcoes padrao:
+
+| Nome | URL |
+|---|---|
+| IoT local | `http://localhost:8080` |
+| Andromeda | `http://andromeda.lasdpc.icmc.usp.br:60107/` |
+
+Observacao: a porta `60107` do Andromeda foi validada como HTTP. A URL `https://andromeda.lasdpc.icmc.usp.br:60107/` falha por TLS (`wrong version number`) a partir da Pi.
+
+Arquivos persistentes:
+
+```text
+~/.config/lasdpc/session.env
+~/.config/lasdpc/dashboards.json
+```
+
+No painel:
+
+- `Usar`: troca o dashboard padrao sem abrir imediatamente.
+- `Abrir`: troca o dashboard padrao e entra no modo `dashboard`.
+
 ## Troca de modos
 
 ```sh
@@ -48,6 +73,8 @@ cat ~/.config/lasdpc/mode
 `media` abre Kodi. Ao sair do Kodi, a sessao volta automaticamente ao menu.
 
 `games` abre EmulationStation se existir; no Debian/Trixie atual abre `ares`, instalado via apt, para emulacao multi-sistema. ROMs legais podem ficar em `/srv/lasdpc-pi-station/roms`, com N64 em `/srv/lasdpc-pi-station/roms/n64`.
+
+Para uma instalacao minima de TV do laboratorio, use apenas `desktop` + `dashboard` + menu central. `media` e `games` devem ser tratados como perfis opcionais por estacao.
 
 ## Status cotidiano
 

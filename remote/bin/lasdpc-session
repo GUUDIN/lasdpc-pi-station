@@ -15,7 +15,12 @@ mkdir -p "$CONF_DIR"
 # Defaults (sobrescritos por session.env)
 DASHBOARD_URL="http://localhost:8080"     # homepage local por padrão
 MENU_URL="http://localhost:8090"
-[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+load_env(){
+  DASHBOARD_URL="http://localhost:8080"
+  MENU_URL="http://localhost:8090"
+  [ -f "$ENV_FILE" ] && . "$ENV_FILE"
+}
+load_env
 
 log(){ logger -t lasdpc-session "$*" 2>/dev/null; echo "[lasdpc-session] $*"; }
 
@@ -49,6 +54,7 @@ run_app(){
 log "iniciado (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?})"
 while true; do
   MODE="$(read_mode)"
+  load_env
   if [ "$MODE" = "desktop" ]; then
     # aguarda mudança de modo sem lançar app
     while [ "$(read_mode)" = "desktop" ]; do sleep 2; done

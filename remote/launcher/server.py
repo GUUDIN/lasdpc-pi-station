@@ -5,12 +5,19 @@
 # Bind 127.0.0.1:8090 (somente local; exibido pelo Chromium kiosk).
 # Executado pelo serviço systemd lasdpc-launcher (usuário lasdpc, sudo NOPASSWD).
 # ============================================================
-import json, os, shutil, subprocess, socket
+import json, os, re, shutil, subprocess, socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIND = ("127.0.0.1", 8090)
 MODES = {"dashboard", "menu", "media", "games", "desktop"}
+CONF_DIR = os.path.expanduser("~/.config/lasdpc")
+SESSION_ENV = os.path.join(CONF_DIR, "session.env")
+DASHBOARDS_FILE = os.path.join(CONF_DIR, "dashboards.json")
+DEFAULT_DASHBOARDS = [
+    {"id": "local", "name": "IoT local", "url": "http://localhost:8080"},
+    {"id": "andromeda", "name": "Andromeda", "url": "http://andromeda.lasdpc.icmc.usp.br:60107/"},
+]
 
 def sh(cmd):
     try:
@@ -19,6 +26,107 @@ def sh(cmd):
         return ""
 
 def have(b): return shutil.which(b) is not None
+
+def env_read():
+    data = {"DASHBOARD_URL": "http://localhost:8080", "MENU_URL": "http://localhost:8090"}
+    try:
+        with open(SESSION_ENV) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                data[k.strip()] = v.strip().strip("'\"")
+    except Exception:
+        pass
+    return data
+
+def env_write(data):
+    os.makedirs(CONF_DIR, exist_ok=True)
+    current = env_read()
+    current.update(data)
+    body = "".join(f"{k}={v}\n" for k, v in sorted(current.items()))
+    tmp = SESSION_ENV + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(body)
+    os.replace(tmp, SESSION_ENV)
+
+def safe_id(name):
+    sid = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+    return sid[:40] or "dashboard"
+
+def valid_url(url):
+    return isinstance(url, str) and re.match(r"^https?://[^ \t\r\n]+$", url) is not None
+
+def dashboards_load():
+    env = env_read()
+    dashboards = []
+    try:
+        with open(DASHBOARDS_FILE) as f:
+            raw = json.load(f)
+        if isinstance(raw, list):
+            dashboards = raw
+        elif isinstance(raw, dict):
+            dashboards = raw.get("dashboards", [])
+    except Exception:
+        dashboards = []
+
+    by_url = {}
+    for item in DEFAULT_DASHBOARDS + dashboards:
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("name", "")).strip()[:80]
+        url = str(item.get("url", "")).strip()
+        if not name or not valid_url(url):
+            continue
+        did = safe_id(str(item.get("id") or name))
+        by_url[url] = {"id": did, "name": name, "url": url}
+
+    current = env.get("DASHBOARD_URL", "http://localhost:8080")
+    if valid_url(current) and current not in by_url:
+        by_url[current] = {"id": safe_id(current), "name": "Dashboard atual", "url": current}
+    dashboards = list(by_url.values())
+    dashboards.sort(key=lambda x: (x["url"] != current, x["name"].lower()))
+    return {"current": current, "dashboards": dashboards}
+
+def dashboards_save(items):
+    os.makedirs(CONF_DIR, exist_ok=True)
+    tmp = DASHBOARDS_FILE + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump({"dashboards": items}, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    os.replace(tmp, DASHBOARDS_FILE)
+
+def dashboard_select(payload):
+    state = dashboards_load()
+    wanted = str(payload.get("id") or "").strip()
+    url = str(payload.get("url") or "").strip()
+    chosen = None
+    for item in state["dashboards"]:
+        if item["id"] == wanted or item["url"] == url:
+            chosen = item
+            break
+    if chosen is None and valid_url(url):
+        chosen = {"id": safe_id(payload.get("name") or url), "name": str(payload.get("name") or "Dashboard").strip()[:80], "url": url}
+        state["dashboards"].append(chosen)
+        dashboards_save(state["dashboards"])
+    if chosen is None:
+        raise ValueError("dashboard invalido")
+    env_write({"DASHBOARD_URL": chosen["url"]})
+    return chosen
+
+def dashboard_save(payload):
+    name = str(payload.get("name") or "").strip()[:80]
+    url = str(payload.get("url") or "").strip()
+    if not name or not valid_url(url):
+        raise ValueError("nome ou URL invalidos")
+    state = dashboards_load()
+    did = safe_id(payload.get("id") or name)
+    item = {"id": did, "name": name, "url": url}
+    out = [x for x in state["dashboards"] if x["id"] != did and x["url"] != url]
+    out.append(item)
+    dashboards_save(out)
+    return item
 
 def net_ok():
     try:
@@ -45,6 +153,7 @@ def status():
                 n, s = line.split("|", 1)
                 containers.append({"name": n.replace("lasdpc-", ""), "status": s})
     return {"mode": mode, "temp": temp, "throttled": thr, "ip": ip,
+            "dashboard": env_read().get("DASHBOARD_URL", ""),
             "tailscale": ts, "net": net_ok(), "containers": containers}
 
 class H(BaseHTTPRequestHandler):
@@ -56,6 +165,15 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(b)
+
+    def _json_body(self):
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            if length <= 0:
+                return {}
+            return json.loads(self.rfile.read(length).decode())
+        except Exception:
+            return {}
 
     def log_message(self, *a):  # silencioso
         pass
@@ -69,6 +187,8 @@ class H(BaseHTTPRequestHandler):
                 self._send(500, str(e), "text/plain")
         elif self.path == "/api/status":
             self._send(200, json.dumps(status()))
+        elif self.path == "/api/dashboards":
+            self._send(200, json.dumps(dashboards_load(), ensure_ascii=False))
         else:
             self._send(404, "not found", "text/plain")
 
@@ -87,6 +207,18 @@ class H(BaseHTTPRequestHandler):
         elif p == "/api/power/shutdown":
             subprocess.Popen(["sudo", "systemctl", "poweroff"])
             self._send(200, json.dumps({"ok": True}))
+        elif p == "/api/dashboard/select":
+            try:
+                item = dashboard_select(self._json_body())
+                self._send(200, json.dumps({"ok": True, "dashboard": item}, ensure_ascii=False))
+            except Exception as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        elif p == "/api/dashboard/save":
+            try:
+                item = dashboard_save(self._json_body())
+                self._send(200, json.dumps({"ok": True, "dashboard": item}, ensure_ascii=False))
+            except Exception as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
         else:
             self._send(404, "not found", "text/plain")
 

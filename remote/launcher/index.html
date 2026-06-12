@@ -25,8 +25,22 @@
   .tile .lbl{font-size:1.5rem;margin-top:14px;font-weight:600}
   .tile .sub{font-size:.95rem;color:var(--muted);margin-top:6px}
   .tile.danger.focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.35)}
+  .panel{position:fixed;inset:78px 5vw auto 5vw;max-height:78vh;overflow:auto;background:#10182f;border:1px solid #2a3761;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.45);padding:22px;z-index:5}
+  .panel[hidden]{display:none}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
+  .panel h2{font-size:1.25rem;margin:0}
+  .close,.btn{border:1px solid #35466f;background:#172044;color:var(--fg);border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}
+  .btn.primary{border-color:var(--accent);background:#1d4ed8}
+  .dash-list{display:grid;gap:10px;margin-bottom:18px}
+  .dash-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid #243253;border-radius:10px;padding:12px;background:#121a33}
+  .dash-name{font-weight:650}
+  .dash-url{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
+  .dash-current{color:var(--ok);font-size:.9rem;margin-top:4px}
+  .dash-form{display:grid;grid-template-columns:1fr 2fr auto;gap:10px}
+  input{width:100%;border:1px solid #35466f;background:#0b1020;color:var(--fg);border-radius:8px;padding:11px 12px;font:inherit}
   footer{padding:14px 40px;color:var(--muted);font-size:.95rem;border-top:1px solid #1c2540;text-align:center}
   kbd{background:#1f2b4d;border-radius:6px;padding:2px 8px;font-size:.9em}
+  @media (max-width:850px){main{grid-template-columns:1fr 1fr;padding:24px}.dash-row,.dash-form{grid-template-columns:1fr}.panel{inset:60px 18px auto 18px}}
 </style>
 </head>
 <body>
@@ -42,12 +56,26 @@
 
 <main id="grid">
   <div class="tile" data-action="mode/dashboard"><div class="ico">📊</div><div class="lbl">Dashboard IoT</div><div class="sub">Chromium kiosk</div></div>
+  <div class="tile" data-action="ui/dashboards"><div class="ico">⚙️</div><div class="lbl">Dashboards</div><div class="sub">Escolher URL</div></div>
   <div class="tile" data-action="mode/media"><div class="ico">🎬</div><div class="lbl">Kodi</div><div class="sub">Central multimídia</div></div>
   <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Emulador</div><div class="sub">ares multi-sistema</div></div>
   <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">Ambiente normal</div></div>
   <div class="tile danger" data-action="power/reboot" data-confirm="Reiniciar a estação?"><div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div><div class="lbl">Reiniciar</div></div>
   <div class="tile danger" data-action="power/shutdown" data-confirm="Desligar a estação?"><div class="ico">⏻</div><div class="lbl">Desligar</div></div>
 </main>
+
+<section class="panel" id="dashPanel" hidden>
+  <div class="panel-head">
+    <h2>Dashboards</h2>
+    <button class="close" id="dashClose">Fechar</button>
+  </div>
+  <div class="dash-list" id="dashList"></div>
+  <form class="dash-form" id="dashForm">
+    <input id="dashName" name="name" placeholder="Nome" autocomplete="off">
+    <input id="dashUrl" name="url" placeholder="http://servidor:porta/" autocomplete="off">
+    <button class="btn primary" type="submit">Adicionar</button>
+  </form>
+</section>
 
 <footer>Navegue com <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> ou o controle • <kbd>Enter</kbd>/<kbd>A</kbd> seleciona • atualizado a cada 5s</footer>
 
@@ -58,9 +86,12 @@ function focusTile(i){ idx=(i+tiles.length)%tiles.length; tiles.forEach((t,k)=>t
 async function act(t){
   const a=t.dataset.action, c=t.dataset.confirm;
   if(c && !confirm(c)) return;
+  if(a==='ui/dashboards'){ openDashboards(); return; }
   try{ await fetch('/api/'+a,{method:'POST'}); }catch(e){}
 }
 document.addEventListener('keydown',e=>{
+  if(!dashPanel.hidden && e.key==='Escape'){ closeDashboards(); return; }
+  if(!dashPanel.hidden && /INPUT|BUTTON/.test(document.activeElement.tagName)) return;
   if(e.key==='ArrowRight') focusTile(idx+1);
   else if(e.key==='ArrowLeft') focusTile(idx-1);
   else if(e.key==='ArrowDown') focusTile(idx+3);
@@ -87,6 +118,42 @@ function gpLoop(){
   requestAnimationFrame(gpLoop);
 }
 requestAnimationFrame(gpLoop);
+
+const dashPanel=document.getElementById('dashPanel');
+const dashList=document.getElementById('dashList');
+const dashForm=document.getElementById('dashForm');
+const dashClose=document.getElementById('dashClose');
+function postJson(path,data){ return fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); }
+function closeDashboards(){ dashPanel.hidden=true; focusTile(idx); }
+async function openDashboards(){ dashPanel.hidden=false; await renderDashboards(); document.getElementById('dashClose').focus(); }
+async function renderDashboards(){
+  const s=await (await fetch('/api/dashboards',{cache:'no-store'})).json();
+  dashList.innerHTML='';
+  for(const d of s.dashboards){
+    const row=document.createElement('div');
+    row.className='dash-row';
+    const meta=document.createElement('div');
+    meta.innerHTML=`<div class="dash-name"></div><div class="dash-url"></div>${d.url===s.current?'<div class="dash-current">selecionado</div>':''}`;
+    meta.querySelector('.dash-name').textContent=d.name;
+    meta.querySelector('.dash-url').textContent=d.url;
+    const use=document.createElement('button');
+    use.className='btn'; use.textContent='Usar';
+    use.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await renderDashboards(); refresh(); };
+    const open=document.createElement('button');
+    open.className='btn primary'; open.textContent='Abrir';
+    open.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await fetch('/api/mode/dashboard',{method:'POST'}); };
+    row.append(meta,use,open); dashList.append(row);
+  }
+}
+dashClose.onclick=closeDashboards;
+dashForm.onsubmit=async(e)=>{
+  e.preventDefault();
+  const name=document.getElementById('dashName').value.trim();
+  const url=document.getElementById('dashUrl').value.trim();
+  if(!name||!url) return;
+  const r=await postJson('/api/dashboard/save',{name,url});
+  if(r.ok){ dashForm.reset(); await renderDashboards(); }
+};
 
 // Indicadores
 async function refresh(){

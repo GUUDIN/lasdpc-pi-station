@@ -1,9 +1,5 @@
-# Autostart do labwc — LASDPC Station (usuário lasdpc).
-# Mantém os componentes normais do desktop (painel/arquivos/kanshi) e
-# adiciona o runner de sessão da estação por cima (modos dashboard/menu/media/games).
-/usr/bin/lwrespawn /usr/bin/pcmanfm-pi &
-/usr/bin/lwrespawn /usr/bin/wf-panel-pi &
-/usr/bin/kanshi &
-/usr/bin/lxsession-xdg-autostart
-# Runner de modos da estação (kiosk/menu/kodi/es). Respawn próprio interno.
+# Autostart do usuário labwc — LASDPC Station.
+# O Raspberry Pi OS já executa o autostart global em /etc/xdg/labwc/autostart
+# com painel, desktop e kanshi. Aqui adicionamos apenas o runner da estação
+# para não duplicar barras/desktop quando o desktop normal é usado.
 /usr/bin/lwrespawn /usr/local/bin/lasdpc-session &
