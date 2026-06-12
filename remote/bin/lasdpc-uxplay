@@ -5,11 +5,11 @@ CONF_DIR="${HOME}/.config/lasdpc"
 ENV_FILE="$CONF_DIR/session.env"
 
 UXPLAY_NAME="TV LASDPC $(hostname)"
-UXPLAY_VIDEO_SINK="waylandsink"
+UXPLAY_VIDEO_SINK="0"
 
 if [ -f "$ENV_FILE" ]; then
   # shellcheck disable=SC1090
   . "$ENV_FILE"
 fi
 
-exec uxplay -n "$UXPLAY_NAME" -vs "$UXPLAY_VIDEO_SINK" -fs
+exec uxplay -n "$UXPLAY_NAME" -nh -vs "$UXPLAY_VIDEO_SINK" -fs
