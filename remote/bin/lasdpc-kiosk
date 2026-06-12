@@ -9,15 +9,13 @@ set -u
 URL="${1:-http://localhost:8090}"
 PROFILE="${HOME}/.config/lasdpc/chromium-kiosk"
 FALLBACK="file://${HOME}/.config/lasdpc/fallback.html"
+ESCAPE_EXTENSION="/opt/lasdpc-pi-station/kiosk/escape-extension"
 mkdir -p "$PROFILE"
 
 # Detecta o binário do Chromium
 CHROME=""
 for c in chromium chromium-browser; do command -v "$c" >/dev/null 2>&1 && { CHROME="$c"; break; }; done
 [ -n "$CHROME" ] || { logger -t lasdpc-kiosk "Chromium não encontrado"; sleep 5; exit 1; }
-
-# Impede suspensão/blank de tela enquanto o kiosk roda (Wayland: systemd-inhibit)
-INHIBIT="systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-kiosk --mode=block"
 
 # Espera rede+DNS por até ~30s; se falhar, abre fallback
 target="$URL"
@@ -29,19 +27,34 @@ for i in $(seq 1 15); do
 done
 [ "$ok" = 1 ] || { logger -t lasdpc-kiosk "rede/DNS indisponível p/ $URL — usando fallback"; target="$FALLBACK"; }
 
-logger -t lasdpc-kiosk "abrindo $target"
-exec $INHIBIT "$CHROME" \
-  --ozone-platform=wayland \
-  --user-data-dir="$PROFILE" \
-  --kiosk "$target" \
-  --start-fullscreen \
-  --noerrdialogs \
-  --disable-infobars \
-  --disable-session-crashed-bubble \
-  --disable-features=Translate,TranslateUI \
-  --no-first-run \
-  --fast --fast-start \
-  --no-default-browser-check \
-  --check-for-update-interval=31536000 \
-  --overscroll-history-navigation=0 \
+CHROME_ARGS=(
+  --ozone-platform=wayland
+  --user-data-dir="$PROFILE"
+  --load-extension="$ESCAPE_EXTENSION"
+  --kiosk "$target"
+  --start-fullscreen
+  --noerrdialogs
+  --disable-infobars
+  --disable-session-crashed-bubble
+  --disable-translate
+  --disable-features=Translate,TranslateUI
+  --lang=pt-BR
+  --accept-lang=pt-BR,pt,en-US,en
+  --no-first-run
+  --fast --fast-start
+  --no-default-browser-check
+  --check-for-update-interval=31536000
+  --overscroll-history-navigation=0
   --autoplay-policy=no-user-gesture-required
+)
+
+logger -t lasdpc-kiosk "abrindo $target"
+
+# Impede suspensão/blank de tela quando a sessão permite. Em recuperações por SSH,
+# systemd-inhibit pode negar polkit; nesse caso abre o Chromium direto.
+if command -v systemd-inhibit >/dev/null 2>&1; then
+  systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-kiosk --mode=block "$CHROME" "${CHROME_ARGS[@]}" && exit 0
+  logger -t lasdpc-kiosk "systemd-inhibit falhou; abrindo Chromium sem inhibit"
+fi
+
+exec "$CHROME" "${CHROME_ARGS[@]}"

@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "LASDPC Kiosk Escape",
+  "version": "1.0.0",
+  "description": "Adds persistent kiosk navigation controls.",
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["escape.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

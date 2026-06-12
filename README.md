@@ -120,8 +120,8 @@ make uninstall   # remove só componentes do projeto (preserva dados/ROMs)
 
 - [Arquitetura](docs/architecture.md) · [Instalação](docs/installation.md) · [Operação](docs/operation.md)
 - [Troubleshooting](docs/troubleshooting.md) · [Jogos/emulação](docs/gaming.md) · [Transferência de ROMs](docs/rom-transfer.md)
-- [Segurança](docs/security.md) · [Recuperação](docs/recovery.md)
+- [Segurança](docs/security.md) · [Recuperação](docs/recovery.md) · [Relatório final](docs/final-report.md)
 
 ## Estado atual da implementação
 
-Fase de fundação concluída: estrutura, biblioteca comum, scripts `00`→`03`, `Makefile`, `README` e esqueleto de docs. Scripts `10`→`90` e `compose.yml` são implementados **ao executar cada fase contra a Pi real**, conforme os princípios de inspeção/backup/idempotência.
+Implantação validada na Pi real em 2026-06-12: base, Docker/Compose, stack IoT 5/5 healthy, kiosk/menu, Kodi, VNC, Tailscale, hardening e healthcheck. RetroPie permanece bloqueado por incompatibilidade com Debian/Raspberry Pi OS 13 Trixie; veja [docs/gaming.md](docs/gaming.md).

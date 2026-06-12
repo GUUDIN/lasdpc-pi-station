@@ -16,17 +16,36 @@ usage(){ echo "uso: lasdpc-mode {dashboard|menu|media|games|desktop}"; exit 1; }
 NEW="$1"
 case "$NEW" in dashboard|menu|media|games|desktop) ;; *) usage ;; esac
 
-# Encerra apenas apps gerenciados (nunca killall genérico)
-kill_managed() {
-  # Chromium do kiosk (identificado pelo profile dedicado)
-  pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
-  # Kodi
-  pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
-  # EmulationStation
-  pkill -x emulationstation 2>/dev/null || true
+# Encerra apenas apps gerenciados que nao pertencem ao novo modo.
+# O modo e gravado antes para o runner reagir rapido; por isso nao mate
+# o app-alvo aqui, ou um processo recem-lancado pode ser encerrado por corrida.
+kill_for_mode() {
+  case "$NEW" in
+    dashboard|menu)
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
+      pkill -x emulationstation 2>/dev/null || true
+      pkill -x ares 2>/dev/null || true
+      ;;
+    media)
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -x emulationstation 2>/dev/null || true
+      pkill -x ares 2>/dev/null || true
+      ;;
+    games)
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
+      ;;
+    desktop)
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
+      pkill -x emulationstation 2>/dev/null || true
+      pkill -x ares 2>/dev/null || true
+      ;;
+  esac
 }
 
 echo "$NEW" > "$MODE_FILE"
-kill_managed
+kill_for_mode
 logger -t lasdpc-mode "modo alterado para: $NEW" 2>/dev/null || true
 echo "Modo: $NEW (a sessão gráfica vai aplicar em instantes)."

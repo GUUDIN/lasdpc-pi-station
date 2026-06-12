@@ -33,7 +33,14 @@ run_app(){
     media)
       if command -v kodi >/dev/null 2>&1; then kodi --standalone; else log "Kodi não instalado; voltando ao menu"; echo menu > "$MODE_FILE"; fi ;;
     games)
-      if command -v emulationstation >/dev/null 2>&1; then emulationstation; else log "EmulationStation não instalado; voltando ao menu"; echo menu > "$MODE_FILE"; fi ;;
+      if command -v emulationstation >/dev/null 2>&1; then
+        emulationstation
+      elif command -v ares >/dev/null 2>&1; then
+        cd /srv/lasdpc-pi-station/roms 2>/dev/null || cd "$HOME"
+        MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 ares
+      else
+        log "Nenhum emulador instalado; voltando ao menu"; echo menu > "$MODE_FILE"
+      fi ;;
     desktop)   return 0 ;;   # nada: desktop normal visível
     *)         echo menu > "$MODE_FILE" ;;
   esac
