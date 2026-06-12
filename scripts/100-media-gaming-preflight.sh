@@ -44,7 +44,7 @@ pi_ssh 'set -euo pipefail
   awk -v t="$temp_raw" "BEGIN{exit !(t < 60)}" && pass TC-0.4 || fail TC-0.4 "temperatura idle ${temp_raw}C >= 60C"
 
   grep -Eq "^dtoverlay=vc4-kms-v3d" /boot/firmware/config.txt && pass TC-0.5 || fail TC-0.5 "dtoverlay ausente"
-  lsmod | grep -q bcm2835_codec && pass TC-0.6 || fail TC-0.6 "bcm2835_codec nao carregado"
+  grep -q "^bcm2835_codec " /proc/modules && pass TC-0.6 || fail TC-0.6 "bcm2835_codec nao carregado"
 
   systemctl is-active --quiet docker || fail TC-0.7 "docker inativo"
   cd /opt/lasdpc-pi-station/docker
