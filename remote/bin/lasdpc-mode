@@ -16,6 +16,19 @@ usage(){ echo "uso: lasdpc-mode {dashboard|menu|media|games|desktop}"; exit 1; }
 NEW="$1"
 case "$NEW" in dashboard|menu|media|games|desktop) ;; *) usage ;; esac
 
+user_systemctl() {
+  local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+  XDG_RUNTIME_DIR="$runtime" systemctl --user "$@" >/dev/null 2>&1 || true
+}
+
+apply_media_target() {
+  if [ "$NEW" = "media" ]; then
+    user_systemctl start lasdpc-media.target
+  else
+    user_systemctl stop lasdpc-media.target uxplay.service
+  fi
+}
+
 # Encerra apenas apps gerenciados que nao pertencem ao novo modo.
 # O modo e gravado antes para o runner reagir rapido; por isso nao mate
 # o app-alvo aqui, ou um processo recem-lancado pode ser encerrado por corrida.
@@ -29,6 +42,7 @@ kill_for_mode() {
       ;;
     media)
       pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
       ;;
@@ -47,5 +61,6 @@ kill_for_mode() {
 
 echo "$NEW" > "$MODE_FILE"
 kill_for_mode
+apply_media_target
 logger -t lasdpc-mode "modo alterado para: $NEW" 2>/dev/null || true
 echo "Modo: $NEW (a sessão gráfica vai aplicar em instantes)."

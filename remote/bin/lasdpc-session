@@ -36,7 +36,8 @@ run_app(){
     menu)      lasdpc-kiosk "$MENU_URL" ;;
     dashboard) lasdpc-kiosk "$DASHBOARD_URL" ;;
     media)
-      if command -v kodi >/dev/null 2>&1; then kodi --standalone; else log "Kodi não instalado; voltando ao menu"; echo menu > "$MODE_FILE"; fi ;;
+      log "modo media receiver ativo; aguardando mudanca de modo"
+      while [ "$(read_mode)" = "media" ]; do sleep 2; done ;;
     games)
       if command -v emulationstation >/dev/null 2>&1; then
         emulationstation

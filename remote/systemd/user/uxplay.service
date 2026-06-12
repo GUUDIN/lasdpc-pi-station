@@ -1,0 +1,15 @@
+[Unit]
+Description=LASDPC Station - AirPlay receiver (UxPlay)
+PartOf=lasdpc-media.target
+After=graphical-session.target pipewire.service wireplumber.service
+
+[Service]
+Type=simple
+Environment=WAYLAND_DISPLAY=wayland-0
+Environment=XDG_RUNTIME_DIR=%t
+ExecStart=/usr/local/bin/lasdpc-uxplay
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=lasdpc-media.target

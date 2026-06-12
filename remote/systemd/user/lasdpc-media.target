@@ -1,0 +1,4 @@
+[Unit]
+Description=LASDPC Station - media receiver profile
+Wants=uxplay.service
+After=graphical-session.target
