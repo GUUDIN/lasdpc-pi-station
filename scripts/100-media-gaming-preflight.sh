@@ -22,6 +22,7 @@ pi_ssh 'set -euo pipefail
     sudo apt-get install -y avahi-daemon avahi-utils
   fi
   sudo systemctl enable --now avahi-daemon
+  sudo modprobe bcm2835-codec || true
 '
 
 log "Executando TCs automatizados da Etapa 0"
