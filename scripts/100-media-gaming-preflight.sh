@@ -10,7 +10,9 @@ log "Etapa 0 — preflight media/gaming em $PI_HOST"
 
 log "Preparando diretorios remotos e instalando avahi-utils se necessario"
 pi_ssh 'set -euo pipefail
-  sudo mkdir -p /var/log/lasdpc /var/backups/lasdpc \
+  sudo install -d -o root -g adm -m 0775 /var/log/lasdpc
+  sudo install -d -o root -g root -m 0755 /var/backups/lasdpc
+  sudo mkdir -p \
     /srv/lasdpc-pi-station/roms \
     /srv/lasdpc-pi-station/saves \
     /srv/lasdpc-pi-station/config
