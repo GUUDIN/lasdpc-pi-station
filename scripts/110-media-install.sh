@@ -42,7 +42,7 @@ pi_ssh "set -euo pipefail
   sudo systemctl enable --now avahi-daemon
 
   installed_version=\$(dpkg-query -W -f='\${Version}' raspotify 2>/dev/null || true)
-  if [ \"\$installed_version\" != \"${RASPOTIFY_VERSION}.librespot.v0.8.0-ea81314\" ]; then
+  if [ \"\$installed_version\" != \"${RASPOTIFY_VERSION}~librespot.v0.8.0-ea81314\" ]; then
     curl -fsSL '${RASPOTIFY_URL}' -o /tmp/${RASPOTIFY_DEB}
     echo '${RASPOTIFY_SHA256}  /tmp/${RASPOTIFY_DEB}' | sha256sum -c -
     dpkg-deb -I /tmp/${RASPOTIFY_DEB} | sudo tee /var/log/lasdpc/raspotify-deb-inspect.log >/dev/null
@@ -65,7 +65,7 @@ pi_ssh "set -euo pipefail
   install -d -o lasdpc -g lasdpc -m 0755 /home/lasdpc/.config/systemd/user
   install -o lasdpc -g lasdpc -m 0644 /tmp/uxplay.service /home/lasdpc/.config/systemd/user/uxplay.service
   install -o lasdpc -g lasdpc -m 0644 /tmp/lasdpc-media.target /home/lasdpc/.config/systemd/user/lasdpc-media.target
-  runuser -u lasdpc -- env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user daemon-reload
+  sudo -u lasdpc env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user daemon-reload
 
   {
     echo '## Etapa 1 — media install — '\$(date -Is)

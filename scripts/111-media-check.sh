@@ -8,7 +8,7 @@ load_env
 log "Etapa 1 — checando perfil media em $PI_HOST"
 
 pi_ssh 'set -euo pipefail
-  userctl(){ runuser -u lasdpc -- env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user "$@"; }
+  userctl(){ sudo -u lasdpc env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user "$@"; }
   pass(){ printf "PASS %s\n" "$1"; }
   fail(){ printf "FAIL %s: %s\n" "$1" "$2"; exit 1; }
 
