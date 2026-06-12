@@ -9,7 +9,7 @@ S     := ./scripts
 
 .PHONY: help preflight ssh-test inspect backup base kiosk docker iot kodi \
         retropie-check retropie launcher hardening healthcheck deploy status \
-        logs update restore uninstall \
+        logs update restore uninstall media-gaming-preflight \
         iot-up iot-down iot-status iot-logs iot-backup iot-update
 
 help: ## Mostra esta ajuda
@@ -45,6 +45,8 @@ hardening: ## Segurança (SSH/firewall/atualizações) — com salvaguardas
 	@$(S)/80-hardening.sh
 healthcheck: ## Healthcheck (temperatura, throttling, espaço, serviços, containers)
 	@$(S)/90-healthcheck.sh
+media-gaming-preflight: ## Etapa 0: preflight dos perfis media/gaming
+	@$(S)/100-media-gaming-preflight.sh
 
 deploy: preflight ssh-test inspect backup base docker iot kiosk kodi launcher ## Instala tudo EXCETO RetroPie
 	@echo ">> deploy concluído. RetroPie é separado: rode 'make retropie-check' e depois 'make retropie'."
