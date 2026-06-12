@@ -45,28 +45,25 @@ load_env() {
   : "${REMOTE_BACKUPS:=/var/backups/lasdpc-pi-station}"
   # Expande ~ no caminho da chave
   PI_SSH_KEY="${PI_SSH_KEY/#\~/$HOME}"
-}
 
-# --- Opções SSH seguras (NUNCA StrictHostKeyChecking=no) ---
-# accept-new: confia na 1ª vez registrando fingerprint, mas alerta se mudar.
-ssh_opts() {
-  local opts=(-p "$PI_PORT" -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new -o ServerAliveInterval=15)
+  # Monta o array global de opções SSH (compatível com bash 3.2 — sem mapfile).
+  # NUNCA StrictHostKeyChecking=no. accept-new: confia na 1ª vez e alerta se mudar.
+  # SetEnv LC_ALL=C evita avisos de locale ainda não gerado na Pi.
+  SSH_OPTS=(-p "$PI_PORT" -o ConnectTimeout=10 -o StrictHostKeyChecking=accept-new \
+            -o ServerAliveInterval=15 -o SetEnv=LC_ALL=C)
   if [ -f "$PI_SSH_KEY" ]; then
-    opts+=(-o IdentitiesOnly=yes -i "$PI_SSH_KEY")
+    SSH_OPTS+=(-o IdentitiesOnly=yes -i "$PI_SSH_KEY")
   fi
-  printf '%s\n' "${opts[@]}"
 }
 
 # Executa comando remoto (read-only por padrão; o chamador decide o que envia)
 pi_ssh() {
-  local opts; mapfile -t opts < <(ssh_opts)
-  ssh "${opts[@]}" "${PI_USER}@${PI_HOST}" "$@"
+  ssh "${SSH_OPTS[@]}" "${PI_USER}@${PI_HOST}" "$@"
 }
 
 # rsync sobre SSH com as mesmas opções
 pi_rsync() {
-  local opts; mapfile -t opts < <(ssh_opts)
-  rsync -e "ssh ${opts[*]}" "$@"
+  rsync -e "ssh ${SSH_OPTS[*]}" "$@"
 }
 
 # Confirmação interativa (idempotência/segurança em ações sensíveis)
