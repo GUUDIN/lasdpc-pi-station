@@ -1,0 +1,8 @@
+[Unit]
+Description=LASDPC Station - healthcheck periódico
+After=multi-user.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lasdpc-healthcheck.sh
+Nice=10

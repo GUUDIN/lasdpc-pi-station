@@ -1,0 +1,13 @@
+- IoT:
+    - Node-RED:
+        href: http://10.0.1.218:1880
+        description: Fluxos e automações IoT
+        icon: node-red.png
+    - Grafana:
+        href: http://10.0.1.218:3000
+        description: Dashboards e visualização
+        icon: grafana.png
+    - InfluxDB:
+        href: http://10.0.1.218:8086
+        description: Banco de séries temporais
+        icon: influxdb.png

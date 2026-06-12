@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# lasdpc-status — visão rápida da estação (modo, temp, throttling, IP, containers).
+set -u
+CONF_DIR="${HOME:-/home/lasdpc}/.config/lasdpc"
+MODE="$(tr -d '[:space:]' < "$CONF_DIR/mode" 2>/dev/null || echo '?')"
+TEMP="$(vcgencmd measure_temp 2>/dev/null | sed 's/temp=//')"
+THR="$(vcgencmd get_throttled 2>/dev/null)"
+IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
+TS="$(tailscale ip -4 2>/dev/null | head -1)"
+echo "===== LASDPC Station ====="
+echo "Modo atual : $MODE"
+echo "Temperatura: ${TEMP:-?}"
+echo "Throttling : ${THR:-?}"
+echo "IP LAN     : ${IP:-?}"
+echo "IP Tailscale: ${TS:-(n/a)}"
+echo "Uptime     : $(uptime -p 2>/dev/null)"
+echo "--- Containers IoT ---"
+if command -v docker >/dev/null 2>&1; then
+  sudo docker ps --format '{{.Names}}: {{.Status}}' 2>/dev/null | grep lasdpc || echo "(nenhum container lasdpc ativo)"
+else echo "(docker ausente)"; fi

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LASDPC Station</title>
+<style>
+  :root{ color-scheme: dark; --bg:#0b1020; --fg:#e6e9f2; --muted:#8b93ad; --accent:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0}
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);
+       display:flex;flex-direction:column;min-height:100vh}
+  header{display:flex;justify-content:space-between;align-items:center;padding:24px 40px;border-bottom:1px solid #1c2540}
+  header h1{font-size:1.8rem;margin:0;letter-spacing:.5px}
+  .badges{display:flex;gap:18px;font-size:1.05rem;color:var(--muted);flex-wrap:wrap}
+  .badge b{color:var(--fg)}
+  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:6px}
+  main{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding:40px;align-content:center}
+  .tile{background:#121a33;border:2px solid #1f2b4d;border-radius:20px;padding:38px 24px;text-align:center;
+        cursor:pointer;transition:transform .08s,border-color .08s,background .08s;outline:none}
+  .tile:focus,.tile:hover{transform:translateY(-3px);border-color:var(--accent);background:#16204200}
+  .tile.focus{border-color:var(--accent);background:#172044;box-shadow:0 0 0 3px rgba(59,130,246,.35)}
+  .tile .ico{font-size:3.2rem;line-height:1}
+  .tile .lbl{font-size:1.5rem;margin-top:14px;font-weight:600}
+  .tile .sub{font-size:.95rem;color:var(--muted);margin-top:6px}
+  .tile.danger.focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.35)}
+  footer{padding:14px 40px;color:var(--muted);font-size:.95rem;border-top:1px solid #1c2540;text-align:center}
+  kbd{background:#1f2b4d;border-radius:6px;padding:2px 8px;font-size:.9em}
+</style>
+</head>
+<body>
+<header>
+  <h1>⬢ LASDPC Station</h1>
+  <div class="badges">
+    <span class="badge"><span id="netdot" class="dot"></span>Rede: <b id="net">…</b></span>
+    <span class="badge">🌡️ <b id="temp">…</b></span>
+    <span class="badge">📡 <b id="ip">…</b></span>
+    <span class="badge">📦 <b id="cont">…</b></span>
+  </div>
+</header>
+
+<main id="grid">
+  <div class="tile" data-action="mode/dashboard"><div class="ico">📊</div><div class="lbl">Dashboard IoT</div><div class="sub">Chromium kiosk</div></div>
+  <div class="tile" data-action="mode/media"><div class="ico">🎬</div><div class="lbl">Kodi</div><div class="sub">Central multimídia</div></div>
+  <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Jogos</div><div class="sub">EmulationStation</div></div>
+  <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">Ambiente normal</div></div>
+  <div class="tile danger" data-action="power/reboot" data-confirm="Reiniciar a estação?"><div class="ico">🔄</div><div class="lbl">Reiniciar</div></div>
+  <div class="tile danger" data-action="power/shutdown" data-confirm="Desligar a estação?"><div class="ico">⏻</div><div class="lbl">Desligar</div></div>
+</main>
+
+<footer>Navegue com <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> ou o controle • <kbd>Enter</kbd>/<kbd>A</kbd> seleciona • atualizado a cada 5s</footer>
+
+<script>
+const tiles=[...document.querySelectorAll('.tile')];
+let idx=0;
+function focusTile(i){ idx=(i+tiles.length)%tiles.length; tiles.forEach((t,k)=>t.classList.toggle('focus',k===idx)); tiles[idx].focus(); }
+async function act(t){
+  const a=t.dataset.action, c=t.dataset.confirm;
+  if(c && !confirm(c)) return;
+  try{ await fetch('/api/'+a,{method:'POST'}); }catch(e){}
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight') focusTile(idx+1);
+  else if(e.key==='ArrowLeft') focusTile(idx-1);
+  else if(e.key==='ArrowDown') focusTile(idx+3);
+  else if(e.key==='ArrowUp') focusTile(idx-3);
+  else if(e.key==='Enter'||e.key===' ') act(tiles[idx]);
+});
+tiles.forEach((t,k)=>{ t.tabIndex=0; t.addEventListener('click',()=>{idx=k;act(t);}); t.addEventListener('mouseenter',()=>focusTile(k)); });
+focusTile(0);
+
+// Gamepad: D-pad/sticks navegam, botão A (0) seleciona
+let gpPrev={};
+function gpLoop(){
+  const gps=navigator.getGamepads?navigator.getGamepads():[];
+  for(const gp of gps){ if(!gp) continue;
+    const ax=gp.axes||[], bt=gp.buttons||[];
+    const press=(i)=>bt[i]&&bt[i].pressed;
+    const edge=(name,val)=>{const p=gpPrev[name];gpPrev[name]=val;return val&&!p;};
+    if(edge('r', press(15)||ax[0]>0.5)) focusTile(idx+1);
+    if(edge('l', press(14)||ax[0]<-0.5)) focusTile(idx-1);
+    if(edge('d', press(13)||ax[1]>0.5)) focusTile(idx+3);
+    if(edge('u', press(12)||ax[1]<-0.5)) focusTile(idx-3);
+    if(edge('a', press(0))) act(tiles[idx]);
+  }
+  requestAnimationFrame(gpLoop);
+}
+requestAnimationFrame(gpLoop);
+
+// Indicadores
+async function refresh(){
+  try{
+    const s=await (await fetch('/api/status',{cache:'no-store'})).json();
+    document.getElementById('temp').textContent=s.temp||'?';
+    document.getElementById('ip').textContent=s.ip||'?';
+    const net=document.getElementById('net'), nd=document.getElementById('netdot');
+    net.textContent=s.net?'online':'offline'; nd.style.background=s.net?'var(--ok)':'var(--bad)';
+    const up=(s.containers||[]).filter(c=>/Up|healthy/i.test(c.status)).length;
+    const tot=(s.containers||[]).length;
+    document.getElementById('cont').textContent=tot? (up+'/'+tot):'0';
+  }catch(e){}
+}
+refresh(); setInterval(refresh,5000);
+</script>
+</body>
+</html>

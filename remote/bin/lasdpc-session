@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-session — runner da sessão gráfica (lançado pelo autostart do labwc).
+# Lê o modo atual e mantém o app correspondente rodando, com backoff/limite.
+# Modos: menu | dashboard | media | games | desktop
+# Roda DENTRO da sessão Wayland (labwc), então tem WAYLAND_DISPLAY/XDG_RUNTIME_DIR.
+# ============================================================
+set -u
+CONF_DIR="${HOME}/.config/lasdpc"
+MODE_FILE="$CONF_DIR/mode"
+ENV_FILE="$CONF_DIR/session.env"   # define DASHBOARD_URL, MENU_URL
+mkdir -p "$CONF_DIR"
+[ -f "$MODE_FILE" ] || echo "menu" > "$MODE_FILE"
+
+# Defaults (sobrescritos por session.env)
+DASHBOARD_URL="http://localhost:8080"     # homepage local por padrão
+MENU_URL="http://localhost:8090"
+[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+
+log(){ logger -t lasdpc-session "$*" 2>/dev/null; echo "[lasdpc-session] $*"; }
+
+read_mode(){ tr -d '[:space:]' < "$MODE_FILE" 2>/dev/null || echo menu; }
+
+# backoff contra crash-loop
+declare -A fails
+now(){ date +%s; }
+
+run_app(){
+  local mode="$1"
+  case "$mode" in
+    menu)      lasdpc-kiosk "$MENU_URL" ;;
+    dashboard) lasdpc-kiosk "$DASHBOARD_URL" ;;
+    media)
+      if command -v kodi >/dev/null 2>&1; then kodi --standalone; else log "Kodi não instalado; voltando ao menu"; echo menu > "$MODE_FILE"; fi ;;
+    games)
+      if command -v emulationstation >/dev/null 2>&1; then emulationstation; else log "EmulationStation não instalado; voltando ao menu"; echo menu > "$MODE_FILE"; fi ;;
+    desktop)   return 0 ;;   # nada: desktop normal visível
+    *)         echo menu > "$MODE_FILE" ;;
+  esac
+}
+
+log "iniciado (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?})"
+while true; do
+  MODE="$(read_mode)"
+  if [ "$MODE" = "desktop" ]; then
+    # aguarda mudança de modo sem lançar app
+    while [ "$(read_mode)" = "desktop" ]; do sleep 2; done
+    continue
+  fi
+  t0=$(now)
+  run_app "$MODE"
+  # Mídia/jogos: ao SAIR do app, volta ao menu (não relança).
+  # Só volta se o modo ainda for o mesmo (lasdpc-mode pode ter trocado).
+  if { [ "$MODE" = "media" ] || [ "$MODE" = "games" ]; } && [ "$(read_mode)" = "$MODE" ]; then
+    echo menu > "$MODE_FILE"
+  fi
+  # app saiu (fechou ou foi morto por lasdpc-mode)
+  dt=$(( $(now) - t0 ))
+  if [ "$dt" -lt 5 ]; then
+    fails[$MODE]=$(( ${fails[$MODE]:-0} + 1 ))
+    if [ "${fails[$MODE]}" -ge 5 ]; then
+      log "modo $MODE falhou ${fails[$MODE]}x rápido — caindo para o menu (backoff)"
+      echo menu > "$MODE_FILE"; fails[$MODE]=0; sleep 3
+    else
+      sleep 2
+    fi
+  else
+    fails[$MODE]=0
+  fi
+done

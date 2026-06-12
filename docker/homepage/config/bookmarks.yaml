@@ -1,0 +1,8 @@
+- Estação:
+    - Dashboard IoT:
+        - abbr: IoT
+          href: http://10.0.1.218:3000
+- Lab:
+    - Redmine LaSDPC:
+        - abbr: RM
+          href: http://redmine.lasdpc.icmc.usp.br

@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Reinicia o Chromium kiosk (o lasdpc-session o relança no modo atual).
+pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null && echo "kiosk reiniciando..." || echo "kiosk não estava rodando (será iniciado pela sessão)."

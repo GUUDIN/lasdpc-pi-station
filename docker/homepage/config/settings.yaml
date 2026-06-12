@@ -1,0 +1,8 @@
+title: LASDPC Pi Station
+theme: dark
+color: slate
+headerStyle: clean
+layout:
+  IoT:
+    style: row
+    columns: 3

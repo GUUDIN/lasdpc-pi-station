@@ -1,0 +1,17 @@
+[Unit]
+Description=LASDPC Station - menu central (servidor local)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lasdpc
+ExecStart=/usr/bin/python3 /opt/lasdpc-pi-station/launcher/server.py
+Restart=on-failure
+RestartSec=3
+# Limite de reinícios (evita loop infinito)
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Install]
+WantedBy=multi-user.target
