@@ -18,7 +18,7 @@ export DEBIAN_FRONTEND=noninteractive
 . /etc/os-release
 ARCH=$(dpkg --print-architecture)
 echo ">> Distro: $ID  codename: $VERSION_CODENAME  arch: $ARCH"
-case "$ARCH" in arm64|amd64) ;; *) echo "ERRO: arch $ARCH não suportada por este script"; exit 1 ;; esac
+if [ "$ARCH" != "arm64" ] && [ "$ARCH" != "amd64" ]; then echo "ERRO: arch $ARCH não suportada por este script"; exit 1; fi
 
 echo ">> Conflitos potenciais (serão listados, não removidos automaticamente)"
 CONFLICTS=""
