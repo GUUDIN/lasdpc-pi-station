@@ -14,7 +14,7 @@ pi_ssh 'set -euo pipefail
   lasdpc-mode youtube >/tmp/lasdpc-youtube-check-mode.out
   sleep 20
 
-  ps -u lasdpc -o args= > /tmp/lasdpc-youtube-ps.txt
+  ps -u lasdpc -o comm=,args= | awk "\$1 ~ /^(chromium|systemd-inhibit)$/ {print}" > /tmp/lasdpc-youtube-ps.txt
   grep -q -- "--user-data-dir=.*/chromium-youtube-tv" /tmp/lasdpc-youtube-ps.txt \
     && pass TC-3.1-profile || fail TC-3.1 "Chromium YouTube profile nao encontrado"
   grep -q "https://www.youtube.com/tv" /tmp/lasdpc-youtube-ps.txt \
@@ -24,7 +24,7 @@ pi_ssh 'set -euo pipefail
 
   lasdpc-mode menu >/tmp/lasdpc-youtube-check-menu.out
   sleep 5
-  ps -u lasdpc -o args= > /tmp/lasdpc-youtube-ps-after.txt
+  ps -u lasdpc -o comm=,args= | awk "\$1 ~ /^(chromium|systemd-inhibit)$/ {print}" > /tmp/lasdpc-youtube-ps-after.txt
   if grep -q -- "--user-data-dir=.*/chromium-youtube-tv" /tmp/lasdpc-youtube-ps-after.txt; then
     fail TC-3.6 "processo Chromium YouTube ficou orfao"
   else
