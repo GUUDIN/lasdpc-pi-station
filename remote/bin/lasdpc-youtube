@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-youtube — abre YouTube TV em Chromium kiosk.
+# O pareamento/cast é pelo app do YouTube no celular usando código de TV.
+# ============================================================
+set -u
+
+CONF_DIR="${HOME}/.config/lasdpc"
+ENV_FILE="$CONF_DIR/session.env"
+PROFILE="$CONF_DIR/chromium-youtube-tv"
+ESCAPE_EXTENSION="/opt/lasdpc-pi-station/kiosk/escape-extension"
+
+YOUTUBE_TV_URL="https://www.youtube.com/tv"
+YOUTUBE_TV_UA="Mozilla/5.0 (SMART-TV; Linux; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/5.0 TV Safari/537.36"
+
+if [ -f "$ENV_FILE" ]; then
+  # shellcheck disable=SC1090
+  . "$ENV_FILE"
+fi
+
+mkdir -p "$PROFILE"
+
+CHROME=""
+for c in chromium chromium-browser; do
+  command -v "$c" >/dev/null 2>&1 && { CHROME="$c"; break; }
+done
+[ -n "$CHROME" ] || { logger -t lasdpc-youtube "Chromium nao encontrado"; sleep 5; exit 1; }
+
+CHROME_ARGS=(
+  --ozone-platform=wayland
+  --user-data-dir="$PROFILE"
+  --load-extension="$ESCAPE_EXTENSION"
+  --kiosk "$YOUTUBE_TV_URL"
+  --start-fullscreen
+  --noerrdialogs
+  --disable-infobars
+  --disable-session-crashed-bubble
+  --disable-translate
+  --disable-features=Translate,TranslateUI
+  --lang=pt-BR
+  --accept-lang=pt-BR,pt,en-US,en
+  --no-first-run
+  --fast
+  --fast-start
+  --no-default-browser-check
+  --check-for-update-interval=31536000
+  --overscroll-history-navigation=0
+  --autoplay-policy=no-user-gesture-required
+)
+
+if [ -n "${YOUTUBE_TV_UA:-}" ]; then
+  CHROME_ARGS+=(--user-agent="$YOUTUBE_TV_UA")
+fi
+
+logger -t lasdpc-youtube "abrindo $YOUTUBE_TV_URL"
+
+if command -v systemd-inhibit >/dev/null 2>&1; then
+  systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-youtube --mode=block "$CHROME" "${CHROME_ARGS[@]}" && exit 0
+  logger -t lasdpc-youtube "systemd-inhibit falhou; abrindo Chromium sem inhibit"
+fi
+
+exec "$CHROME" "${CHROME_ARGS[@]}"

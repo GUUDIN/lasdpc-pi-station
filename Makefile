@@ -9,7 +9,7 @@ S     := ./scripts
 
 .PHONY: help preflight ssh-test inspect backup base kiosk docker iot kodi \
         retropie-check retropie launcher hardening healthcheck deploy status \
-        logs update restore uninstall media-gaming-preflight media-install media-check \
+        logs update restore uninstall media-gaming-preflight media-install media-check youtube-check \
         iot-up iot-down iot-status iot-logs iot-backup iot-update
 
 help: ## Mostra esta ajuda
@@ -51,6 +51,8 @@ media-install: ## Etapa 1: instala perfil media (UxPlay + Raspotify)
 	@$(S)/110-media-install.sh
 media-check: ## Etapa 1: checa perfil media
 	@$(S)/111-media-check.sh
+youtube-check: ## Etapa 3: checa YouTube na TV (parte automatizável)
+	@$(S)/130-youtube-check.sh
 
 deploy: preflight ssh-test inspect backup base docker iot kiosk kodi launcher ## Instala tudo EXCETO RetroPie
 	@echo ">> deploy concluído. RetroPie é separado: rode 'make retropie-check' e depois 'make retropie'."

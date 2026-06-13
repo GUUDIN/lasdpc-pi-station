@@ -15,8 +15,11 @@ log "Etapa 1 — instalando perfil media em $PI_HOST"
 
 log "Enviando artefatos versionados para /tmp na Pi"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-uxplay" "$PI_USER@$PI_HOST:/tmp/lasdpc-uxplay"
+pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-youtube" "$PI_USER@$PI_HOST:/tmp/lasdpc-youtube"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-mode" "$PI_USER@$PI_HOST:/tmp/lasdpc-mode"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-session" "$PI_USER@$PI_HOST:/tmp/lasdpc-session"
+pi_rsync -a "$PROJECT_DIR/remote/launcher/index.html" "$PI_USER@$PI_HOST:/tmp/lasdpc-launcher-index.html"
+pi_rsync -a "$PROJECT_DIR/remote/launcher/server.py" "$PI_USER@$PI_HOST:/tmp/lasdpc-launcher-server.py"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/user/uxplay.service" "$PI_USER@$PI_HOST:/tmp/uxplay.service"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/user/lasdpc-media.target" "$PI_USER@$PI_HOST:/tmp/lasdpc-media.target"
 pi_rsync -a "$PROJECT_DIR/remote/config/raspotify.conf" "$PI_USER@$PI_HOST:/tmp/raspotify.conf"
@@ -56,11 +59,19 @@ pi_ssh "set -euo pipefail
   sudo systemctl restart raspotify
 
   backup_file /usr/local/bin/lasdpc-uxplay
+  backup_file /usr/local/bin/lasdpc-youtube
   backup_file /usr/local/bin/lasdpc-mode
   backup_file /usr/local/bin/lasdpc-session
   sudo install -o root -g root -m 0755 /tmp/lasdpc-uxplay /usr/local/bin/lasdpc-uxplay
+  sudo install -o root -g root -m 0755 /tmp/lasdpc-youtube /usr/local/bin/lasdpc-youtube
   sudo install -o root -g root -m 0755 /tmp/lasdpc-mode /usr/local/bin/lasdpc-mode
   sudo install -o root -g root -m 0755 /tmp/lasdpc-session /usr/local/bin/lasdpc-session
+
+  backup_file /opt/lasdpc-pi-station/launcher/index.html
+  backup_file /opt/lasdpc-pi-station/launcher/server.py
+  sudo install -o lasdpc -g lasdpc -m 0644 /tmp/lasdpc-launcher-index.html /opt/lasdpc-pi-station/launcher/index.html
+  sudo install -o lasdpc -g lasdpc -m 0755 /tmp/lasdpc-launcher-server.py /opt/lasdpc-pi-station/launcher/server.py
+  sudo systemctl restart lasdpc-launcher.service
 
   install -d -o lasdpc -g lasdpc -m 0755 /home/lasdpc/.config/systemd/user
   install -o lasdpc -g lasdpc -m 0644 /tmp/uxplay.service /home/lasdpc/.config/systemd/user/uxplay.service
@@ -71,7 +82,7 @@ pi_ssh "set -euo pipefail
     echo '## Etapa 1 — media install — '\$(date -Is)
     echo 'Ações executadas: uxplay/avahi instalados via apt; raspotify ${RASPOTIFY_VERSION} instalado por .deb oficial validado por SHA256; user units instaladas; lasdpc-mode/session atualizados.'
     echo 'Pacotes/versões instalados: uxplay='\$(dpkg-query -W -f='\${Version}' uxplay 2>/dev/null || true)' raspotify='\$(dpkg-query -W -f='\${Version}' raspotify 2>/dev/null || true)
-    echo 'Arquivos criados/modificados: /usr/local/bin/lasdpc-uxplay, /usr/local/bin/lasdpc-mode, /usr/local/bin/lasdpc-session, /etc/raspotify/conf, ~/.config/systemd/user/{uxplay.service,lasdpc-media.target}'
+    echo 'Arquivos criados/modificados: /usr/local/bin/lasdpc-uxplay, /usr/local/bin/lasdpc-youtube, /usr/local/bin/lasdpc-mode, /usr/local/bin/lasdpc-session, /opt/lasdpc-pi-station/launcher/{index.html,server.py}, /etc/raspotify/conf, ~/.config/systemd/user/{uxplay.service,lasdpc-media.target}'
     echo 'TCs: TC-1.1 PENDENTE; TC-1.2..TC-1.9 PENDENTES'
     echo 'Próxima etapa liberada: NÃO'
     echo

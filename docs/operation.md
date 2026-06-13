@@ -60,6 +60,7 @@ No painel:
 lasdpc-mode menu
 lasdpc-mode dashboard
 lasdpc-mode media
+lasdpc-mode youtube
 lasdpc-mode desktop
 lasdpc-mode games
 ```
@@ -70,11 +71,22 @@ O modo atual fica em:
 cat ~/.config/lasdpc/mode
 ```
 
-`media` abre Kodi. Ao sair do Kodi, a sessao volta automaticamente ao menu.
+`media` liga os receivers de midia: Spotify Connect fica sempre ativo via Raspotify, e AirPlay audio fica ativo enquanto o modo media estiver ligado. Ao sair de `media`, o UxPlay para.
+
+`youtube` abre `https://www.youtube.com/tv` em Chromium kiosk com perfil dedicado. No Android ou iPhone, use o app do YouTube e o fluxo de pareamento por codigo de TV. Isto nao e Chromecast nativo; e o caminho suportavel para YouTube sem dongle Chromecast/Android TV.
 
 `games` abre EmulationStation se existir; no Debian/Trixie atual abre `ares`, instalado via apt, para emulacao multi-sistema. ROMs legais podem ficar em `/srv/lasdpc-pi-station/roms`, com N64 em `/srv/lasdpc-pi-station/roms/n64`.
 
 Para uma instalacao minima de TV do laboratorio, use apenas `desktop` + `dashboard` + menu central. `media` e `games` devem ser tratados como perfis opcionais por estacao.
+
+## Midia e Android
+
+O Android e suportado por dois caminhos praticos:
+
+- Spotify: selecionar `TV LASDPC <hostname>` no Spotify Connect.
+- YouTube: abrir `YouTube na TV` no menu, parear o celular pelo codigo exibido no YouTube TV e controlar pelo app do YouTube.
+
+O projeto nao promete Google Cast/Chromecast generico em Linux. Para Cast nativo universal, use um Chromecast/Android TV fisico conectado na TV.
 
 ## Status cotidiano
 

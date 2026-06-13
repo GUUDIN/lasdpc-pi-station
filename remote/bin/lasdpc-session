@@ -2,7 +2,7 @@
 # ============================================================
 # lasdpc-session — runner da sessão gráfica (lançado pelo autostart do labwc).
 # Lê o modo atual e mantém o app correspondente rodando, com backoff/limite.
-# Modos: menu | dashboard | media | games | desktop
+# Modos: menu | dashboard | media | youtube | games | desktop
 # Roda DENTRO da sessão Wayland (labwc), então tem WAYLAND_DISPLAY/XDG_RUNTIME_DIR.
 # ============================================================
 set -u
@@ -38,6 +38,7 @@ run_app(){
     media)
       log "modo media receiver ativo; aguardando mudanca de modo"
       while [ "$(read_mode)" = "media" ]; do sleep 2; done ;;
+    youtube)   lasdpc-youtube ;;
     games)
       if command -v emulationstation >/dev/null 2>&1; then
         emulationstation
@@ -65,7 +66,7 @@ while true; do
   run_app "$MODE"
   # Mídia/jogos: ao SAIR do app, volta ao menu (não relança).
   # Só volta se o modo ainda for o mesmo (lasdpc-mode pode ter trocado).
-  if { [ "$MODE" = "media" ] || [ "$MODE" = "games" ]; } && [ "$(read_mode)" = "$MODE" ]; then
+  if { [ "$MODE" = "media" ] || [ "$MODE" = "youtube" ] || [ "$MODE" = "games" ]; } && [ "$(read_mode)" = "$MODE" ]; then
     echo menu > "$MODE_FILE"
   fi
   # app saiu (fechou ou foi morto por lasdpc-mode)

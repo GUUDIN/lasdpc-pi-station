@@ -27,13 +27,14 @@ Nao ha servico HTTP na porta 80. Use portas explicitas, por exemplo `http://100.
 |---|---|---|
 | Menu | `lasdpc-mode menu` | Menu central local em Chromium kiosk (`localhost:8090`) |
 | Dashboard | `lasdpc-mode dashboard` | Homepage IoT em Chromium kiosk (`localhost:8080`) |
-| Media | `lasdpc-mode media` | Kodi standalone |
+| Media | `lasdpc-mode media` | Receiver AirPlay audio via UxPlay + Spotify Connect via Raspotify |
+| YouTube | `lasdpc-mode youtube` | YouTube TV em Chromium kiosk para pareamento por codigo no celular |
 | Desktop | `lasdpc-mode desktop` | Desktop labwc normal |
 | Games | `lasdpc-mode games` | EmulationStation se existir; caso contrario `ares` |
 
 O runner `lasdpc-session` e iniciado pelo autostart do usuario labwc. O autostart global do Raspberry Pi OS continua responsavel por painel, desktop e kanshi; o autostart do projeto adiciona apenas o runner para evitar barras duplicadas.
 
-Ele le `~/.config/lasdpc/mode` e mantem o app do modo atual. Ao sair do Kodi ou do emulador, o runner volta automaticamente para `menu`.
+Ele le `~/.config/lasdpc/mode` e mantem o app do modo atual. Ao sair do YouTube ou do emulador, o runner volta automaticamente para `menu`.
 
 O modo `dashboard` usa `DASHBOARD_URL` em `~/.config/lasdpc/session.env`. A lista editavel pelo menu fica em `~/.config/lasdpc/dashboards.json`.
 

@@ -10,7 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIND = ("127.0.0.1", 8090)
-MODES = {"dashboard", "menu", "media", "games", "desktop"}
+MODES = {"dashboard", "menu", "media", "youtube", "games", "desktop"}
 CONF_DIR = os.path.expanduser("~/.config/lasdpc")
 SESSION_ENV = os.path.join(CONF_DIR, "session.env")
 DASHBOARDS_FILE = os.path.join(CONF_DIR, "dashboards.json")

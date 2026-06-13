@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
 # lasdpc-mode — máquina de estados de modos (mutuamente exclusivos).
-#   lasdpc-mode dashboard | menu | media | games | desktop
+#   lasdpc-mode dashboard | menu | media | youtube | games | desktop
 # Escreve o modo e encerra APENAS os apps gerenciados pelo projeto.
 # O runner da sessão (lasdpc-session, dentro da sessão gráfica) relança o app.
 # Pode ser chamado por SSH: aqui só mexe em estado + processos (sem GUI).
@@ -11,10 +11,10 @@ MODE_DIR="${HOME:-/home/lasdpc}/.config/lasdpc"
 MODE_FILE="$MODE_DIR/mode"
 mkdir -p "$MODE_DIR"
 
-usage(){ echo "uso: lasdpc-mode {dashboard|menu|media|games|desktop}"; exit 1; }
+usage(){ echo "uso: lasdpc-mode {dashboard|menu|media|youtube|games|desktop}"; exit 1; }
 [ $# -eq 1 ] || usage
 NEW="$1"
-case "$NEW" in dashboard|menu|media|games|desktop) ;; *) usage ;; esac
+case "$NEW" in dashboard|menu|media|youtube|games|desktop) ;; *) usage ;; esac
 
 user_systemctl() {
   local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -36,11 +36,19 @@ kill_for_mode() {
   case "$NEW" in
     dashboard|menu)
       pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
       ;;
     media)
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
+      pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
+      pkill -x emulationstation 2>/dev/null || true
+      pkill -x ares 2>/dev/null || true
+      ;;
+    youtube)
       pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
@@ -48,10 +56,12 @@ kill_for_mode() {
       ;;
     games)
       pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       ;;
     desktop)
       pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
