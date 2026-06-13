@@ -24,7 +24,8 @@ pi_ssh 'set -euo pipefail
 
   lasdpc-mode menu >/tmp/lasdpc-youtube-check-menu.out
   sleep 5
-  if pgrep -u lasdpc -f "chromium-youtube-tv" >/dev/null 2>&1; then
+  ps -u lasdpc -o args= > /tmp/lasdpc-youtube-ps-after.txt
+  if grep -q -- "--user-data-dir=.*/chromium-youtube-tv" /tmp/lasdpc-youtube-ps-after.txt; then
     fail TC-3.6 "processo Chromium YouTube ficou orfao"
   else
     pass TC-3.6
