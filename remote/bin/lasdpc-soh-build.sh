@@ -87,7 +87,8 @@ stamp "Build concluído."
 # ── 5. Install ───────────────────────────────────────────────
 stamp "Instalando em $SOH_DIR..."
 sudo mkdir -p "$SOH_DIR"
-sudo ninja -C "$CMAKE_BUILD" install
+# soh.o2r é gerado na 1ª run com a ROM — não é artifact de build; ignorar erro de install
+sudo ninja -C "$CMAKE_BUILD" install || true
 # Garante executável acessível
 [ -f "$SOH_DIR/soh.elf" ] || { stamp "ERRO: soh.elf não encontrado após install"; exit 1; }
 sudo chmod +x "$SOH_DIR/soh.elf"

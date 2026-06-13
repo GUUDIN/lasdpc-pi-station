@@ -26,7 +26,10 @@ Estado salvo em 2026-06-13 (build SoH em andamento).
   Grid 3x3 completa: IoT / Dashboards / Midia / YouTube / Emulador / Desktop / Como usar / Reiniciar / Desligar.
 - **Backup diario**: `lasdpc-backup.service` + `lasdpc-backup.timer` deployados e ativos.
   Proximo disparo: 2026-06-14 03:04 (3h da manha + randomized 10 min). Retem 7 dias.
-- **Reboot final**: PENDENTE — aguardar fim do build SoH.
+- **Reboot final**: CONCLUIDO (2026-06-13 ~14:00).
+  - throttled=0x0, 0 failed units, 5/5 Docker healthy, temp 57.9°C.
+  - Bug descoberto: Chromium pedia unlock gnome-keyring a cada reboot.
+    Fix: `--password-store=basic` em `lasdpc-kiosk`. Launcher confirmado sem dialog.
 
 ## Atualizacao 2026-06-13 — Etapa 4 CONCLUIDA (gaming fullscreen confirmado)
 
