@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-esde — abre o ES-DE (frontend de TV) sob Wayland/labwc.
+# Lançado por lasdpc-session no modo "games". Sai quando o ES-DE fecha
+# (o lasdpc-session volta ao menu). Fallback: nada aqui — quem decide é a sessão.
+# ============================================================
+set -u
+APPIMAGE=/opt/es-de/ES-DE_aarch64.AppImage
+[ -x "$APPIMAGE" ] || { logger -t lasdpc-esde "ES-DE AppImage ausente em $APPIMAGE"; exit 1; }
+
+# SDL2 escolhe Wayland quando disponível; XWayland é fallback automático.
+# Impede blank/suspensão enquanto joga (best effort; ignora se polkit negar).
+logger -t lasdpc-esde "abrindo ES-DE"
+if command -v systemd-inhibit >/dev/null 2>&1; then
+  systemd-inhibit --what=idle:sleep --why=lasdpc-esde --mode=block "$APPIMAGE" "$@" && exit 0
+  logger -t lasdpc-esde "systemd-inhibit falhou; abrindo ES-DE direto"
+fi
+exec "$APPIMAGE" "$@"

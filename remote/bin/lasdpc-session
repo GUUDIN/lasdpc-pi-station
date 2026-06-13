@@ -40,7 +40,9 @@ run_app(){
       while [ "$(read_mode)" = "media" ]; do sleep 2; done ;;
     youtube)   lasdpc-youtube ;;
     games)
-      if command -v emulationstation >/dev/null 2>&1; then
+      if [ -x /opt/es-de/ES-DE_aarch64.AppImage ] && command -v lasdpc-esde >/dev/null 2>&1; then
+        lasdpc-esde
+      elif command -v emulationstation >/dev/null 2>&1; then
         emulationstation
       elif command -v ares >/dev/null 2>&1; then
         cd /srv/lasdpc-pi-station/roms 2>/dev/null || cd "$HOME"
