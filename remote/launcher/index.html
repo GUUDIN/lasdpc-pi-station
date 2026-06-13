@@ -61,9 +61,28 @@
   <div class="tile" data-action="mode/youtube"><div class="ico">▶</div><div class="lbl">YouTube na TV</div><div class="sub">parear pelo celular</div></div>
   <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Emulador</div><div class="sub">ares multi-sistema</div></div>
   <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">Ambiente normal</div></div>
+  <div class="tile" data-action="ui/help"><div class="ico">ℹ️</div><div class="lbl">Como usar</div><div class="sub">Guia da estação</div></div>
   <div class="tile danger" data-action="power/reboot" data-confirm="Reiniciar a estação?"><div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div><div class="lbl">Reiniciar</div></div>
   <div class="tile danger" data-action="power/shutdown" data-confirm="Desligar a estação?"><div class="ico">⏻</div><div class="lbl">Desligar</div></div>
 </main>
+
+<section class="panel" id="helpPanel" hidden>
+  <div class="panel-head">
+    <h2>ℹ️ Como usar esta estação</h2>
+    <button class="close" id="helpClose">Fechar</button>
+  </div>
+  <div style="display:grid;gap:14px;font-size:1rem;line-height:1.55">
+    <div><b>📊 Dashboard IoT</b> — abre o painel de monitoramento IoT em tela cheia (Grafana / Homepage).</div>
+    <div><b>⚙️ Dashboards</b> — escolhe qual URL exibir no modo dashboard. Útil para projetar qualquer painel da rede.</div>
+    <div><b>📡 Mídia (AirPlay)</b> — ativa o receptor AirPlay. No iPhone/iPad/Mac vá em <em>Espelhamento de Tela</em> e selecione <em>TV LASDPC …</em>. A TV exibe o conteúdo imediatamente.</div>
+    <div><b>▶ YouTube na TV</b> — abre o YouTube em modo TV. No celular/tablet, toque no ícone <em>Cast</em> dentro do YouTube e selecione esta TV. Use o celular como controle remoto.</div>
+    <div><b>🎮 Emulador</b> — abre o emulador <em>ares</em> em tela cheia. Conecte um controle USB/Bluetooth e use <em>Load</em> para carregar uma ROM. ROMs ficam em <code>/srv/lasdpc-pi-station/roms/</code>.</div>
+    <div><b>🖥️ Desktop</b> — exibe o ambiente gráfico normal (Wayland/labwc). Útil para tarefas administrativas locais.</div>
+    <hr style="border-color:#1f2b4d;margin:4px 0">
+    <div><b>Administração remota:</b> <code>ssh lasdpc@100.84.255.77</code> (via Tailscale) ou <code>ssh lasdpc@10.0.1.218</code> (LAN). Serviços: Node-RED :1880 · Grafana :3000 · InfluxDB :8086 · Mosquitto :1883.</div>
+    <div style="color:var(--muted);font-size:.9rem">Temperatura máxima recomendada: 80 °C. Em caso de tela preta ou travamento, use <em>Reiniciar</em>. Em caso de corte de energia, religue a fonte — o sistema inicia automaticamente.</div>
+  </div>
+</section>
 
 <section class="panel" id="dashPanel" hidden>
   <div class="panel-head">
@@ -87,12 +106,14 @@ function focusTile(i){ idx=(i+tiles.length)%tiles.length; tiles.forEach((t,k)=>t
 async function act(t){
   const a=t.dataset.action, c=t.dataset.confirm;
   if(c && !confirm(c)) return;
+  if(a==='ui/help'){ openHelp(); return; }
   if(a==='ui/dashboards'){ openDashboards(); return; }
   try{ await fetch('/api/'+a,{method:'POST'}); }catch(e){}
 }
 document.addEventListener('keydown',e=>{
+  if(!helpPanel.hidden && e.key==='Escape'){ closeHelp(); return; }
   if(!dashPanel.hidden && e.key==='Escape'){ closeDashboards(); return; }
-  if(!dashPanel.hidden && /INPUT|BUTTON/.test(document.activeElement.tagName)) return;
+  if((!dashPanel.hidden||!helpPanel.hidden) && /INPUT|BUTTON/.test(document.activeElement.tagName)) return;
   if(e.key==='ArrowRight') focusTile(idx+1);
   else if(e.key==='ArrowLeft') focusTile(idx-1);
   else if(e.key==='ArrowDown') focusTile(idx+3);
@@ -119,6 +140,12 @@ function gpLoop(){
   requestAnimationFrame(gpLoop);
 }
 requestAnimationFrame(gpLoop);
+
+const helpPanel=document.getElementById('helpPanel');
+const helpClose=document.getElementById('helpClose');
+function openHelp(){ helpPanel.hidden=false; helpClose.focus(); }
+function closeHelp(){ helpPanel.hidden=true; focusTile(idx); }
+helpClose.onclick=closeHelp;
 
 const dashPanel=document.getElementById('dashPanel');
 const dashList=document.getElementById('dashList');

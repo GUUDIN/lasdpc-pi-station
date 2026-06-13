@@ -1,0 +1,11 @@
+[Unit]
+Description=LASDPC Station - backup diário de configuração
+Requires=lasdpc-backup.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=600
+Persistent=true
+
+[Install]
+WantedBy=timers.target
