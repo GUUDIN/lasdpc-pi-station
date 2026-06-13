@@ -8,11 +8,19 @@ set -u
 APPIMAGE=/opt/es-de/ES-DE_aarch64.AppImage
 [ -x "$APPIMAGE" ] || { logger -t lasdpc-esde "ES-DE AppImage ausente em $APPIMAGE"; exit 1; }
 
-# SDL2 escolhe Wayland quando disponível; XWayland é fallback automático.
+# Força o backend Wayland do SDL2 (EGL nativo). Sem isso, o ES-DE cai no
+# X11/XWayland e falha com GLXBadFBConfig no Pi4 (Mesa/V3D). Wayland+EGL funciona.
+export SDL_VIDEODRIVER="${SDL_VIDEODRIVER:-wayland}"
+# Pi4 V3D só dá OpenGL 3.1; ES-DE precisa de 3.3. zink (GL-sobre-Vulkan/V3DV)
+# fornece GL >= 3.3. Override via session.env se necessário (GALLIUM_DRIVER=).
+export GALLIUM_DRIVER="${GALLIUM_DRIVER:-zink}"
+
 # Impede blank/suspensão enquanto joga (best effort; ignora se polkit negar).
+LOG="${HOME}/.config/lasdpc/esde-launch.log"
 logger -t lasdpc-esde "abrindo ES-DE"
+{ echo "=== lasdpc-esde $(date -Iseconds) WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?} ==="; } >>"$LOG" 2>&1
 if command -v systemd-inhibit >/dev/null 2>&1; then
-  systemd-inhibit --what=idle:sleep --why=lasdpc-esde --mode=block "$APPIMAGE" "$@" && exit 0
+  systemd-inhibit --what=idle:sleep --why=lasdpc-esde --mode=block "$APPIMAGE" "$@" >>"$LOG" 2>&1 && exit 0
   logger -t lasdpc-esde "systemd-inhibit falhou; abrindo ES-DE direto"
 fi
-exec "$APPIMAGE" "$@"
+exec "$APPIMAGE" "$@" >>"$LOG" 2>&1

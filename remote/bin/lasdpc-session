@@ -40,13 +40,15 @@ run_app(){
       while [ "$(read_mode)" = "media" ]; do sleep 2; done ;;
     youtube)   lasdpc-youtube ;;
     games)
-      if [ -x /opt/es-de/ES-DE_aarch64.AppImage ] && command -v lasdpc-esde >/dev/null 2>&1; then
+      # ES-DE só se explicitamente opt-in: o AppImage oficial exige OpenGL 3.3
+      # desktop e FALHA no Pi4 (V3D dá GL 3.1) — ver docs/gaming.md.
+      if [ "${LASDPC_GAMES_FRONTEND:-ares}" = "esde" ] && [ -x /opt/es-de/ES-DE_aarch64.AppImage ] && command -v lasdpc-esde >/dev/null 2>&1; then
         lasdpc-esde
-      elif command -v emulationstation >/dev/null 2>&1; then
-        emulationstation
       elif command -v ares >/dev/null 2>&1; then
         cd /srv/lasdpc-pi-station/roms 2>/dev/null || cd "$HOME"
         MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 ares
+      elif command -v emulationstation >/dev/null 2>&1; then
+        emulationstation
       else
         log "Nenhum emulador instalado; voltando ao menu"; echo menu > "$MODE_FILE"
       fi ;;

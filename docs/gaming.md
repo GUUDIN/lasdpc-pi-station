@@ -32,11 +32,16 @@ O menu contem a entrada `Emulador`:
 lasdpc-mode games
 ```
 
-Comportamento:
+Comportamento (atualizado na Etapa 4):
 
-1. Se `emulationstation` existir, abre EmulationStation.
-2. Caso contrario, abre `ares`.
-3. Ao sair do emulador, volta automaticamente para `menu`.
+1. Por padrao abre `ares` (multi-sistema, inclui N64).
+2. ES-DE so e usado se `LASDPC_GAMES_FRONTEND=esde` em `~/.config/lasdpc/session.env`
+   — ver abaixo: o AppImage oficial do ES-DE **nao renderiza no Pi 4**.
+3. Se `emulationstation` existir, e usado como ultimo fallback.
+4. Ao sair do emulador, volta automaticamente para `menu`.
+
+> **Validacao on-screen do modo `games` (ares/ES-DE) e MANUAL-PENDENTE** — exige
+> operador no lab com TV+gamepad. Os TCs automatizados (instalacao/presenca) passam.
 
 Diretorio criado para ROMs legais de N64:
 
@@ -51,6 +56,42 @@ rsync -avh --progress ./Ocarina-of-Time.z64 lasdpc@100.84.255.77:/srv/lasdpc-pi-
 ```
 
 Depois abra `Emulador` no menu e carregue o arquivo pelo ares.
+
+## Etapa 4 — RetroArch + cores + ES-DE (resultado real)
+
+Instalado por `make gaming-install` (`scripts/120-gaming-install.sh`, idempotente, destacado):
+
+- **RetroArch 1.20.0** (apt — NAO Flatpak; mais simples e sem sandbox no Trixie).
+- **Cores via apt**: `nestopia` (NES), `snes9x` (SNES), `genesis_plus_gx` (Mega Drive/Master System), `gambatte` (GB/GBC).
+- **Core N64**: `parallel_n64` do buildbot oficial libretro (aarch64). `mupen64plus_next` NAO esta no buildbot aarch64.
+- **ES-DE 3.4.1** AppImage AArch64 em `/opt/es-de` (sha256 fixado em `/opt/es-de/VERSION`).
+
+Validacao automatizada: `make gaming-check` (`scripts/121-gaming-check.sh`) — **PASS**
+(RetroArch + ES-DE binario + 5 cores + dirs `/srv` + N64 disponivel + >=3 GB).
+
+### ⚠️ ES-DE NAO renderiza no Raspberry Pi 4 (incompatibilidade de GL)
+
+Testado in-session (Wayland/labwc) e o ES-DE falha ao criar o contexto grafico:
+
+```text
+GLXBadFBConfig                 (caminho X11/XWayland)
+EGL_BAD_MATCH em eglCreateContext  (caminho Wayland/EGL)
+```
+
+Causa: o AppImage oficial do ES-DE usa **OpenGL desktop 3.3**, mas o V3D do Pi 4
+fornece apenas **OpenGL 3.1** (e OpenGL ES 3.1). Tentativas com `SDL_VIDEODRIVER=wayland`
+e `GALLIUM_DRIVER=zink` (GL-sobre-Vulkan) nao resolveram porque o AppImage empacota a
+propria stack GL. **Por isso o modo `games` usa `ares` por padrao**, e o ES-DE fica
+apenas como opt-in (`LASDPC_GAMES_FRONTEND=esde`) para futura investigacao.
+
+Caminhos para destravar o ES-DE (a validar on-screen, fora do escopo headless):
+- Build do ES-DE com renderer **OpenGL ES** (nao o AppImage desktop padrao); ou
+- Outro frontend que use GLES no Pi 4 (EmulationStation GLES, Pegasus); ou
+- Manter `ares`/RetroArch direto como frontend.
+
+RetroArch (apt) usa drivers `gl`/`glcore`/`vulkan` e tende a funcionar no Pi 4 — pode
+ser usado diretamente (`retroarch`) como interface de jogos por gamepad enquanto o
+frontend dedicado nao e resolvido.
 
 ## Alternativa recomendada
 

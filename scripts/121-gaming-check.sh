@@ -29,8 +29,8 @@ if pi_ssh "ls $CORE_DIR/parallel_n64_libretro.so >/dev/null 2>&1 || command -v a
 FREE=$(pi_ssh "df -BG --output=avail / | tail -1 | tr -dc 0-9")
 [ "${FREE:-0}" -ge 3 ]; check $? "espaço livre: ${FREE}G (>=3G)"
 
-# Integração: lasdpc-mode games -> ES-DE
-pi_ssh "grep -q 'lasdpc-esde' /usr/local/bin/lasdpc-session"; check $? "lasdpc-session abre ES-DE no modo games"
+# Integração: modo games tem emulador padrão (ares) + ES-DE opt-in disponível
+pi_ssh "command -v ares >/dev/null && grep -q 'LASDPC_GAMES_FRONTEND' /usr/local/bin/lasdpc-session"; check $? "games: ares (default) + ES-DE opt-in (ES-DE não renderiza no Pi4 — ver docs)"
 
 # /srv dirs
 pi_ssh "test -d /srv/lasdpc-pi-station/roms/n64 && test -d /srv/lasdpc-pi-station/saves"; check $? "diretórios roms/saves em /srv"
