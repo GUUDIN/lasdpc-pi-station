@@ -30,6 +30,7 @@ sudo apt-get install -y --no-install-recommends \
   cmake \
   libsdl2-dev \
   libsdl2-mixer-dev \
+  libsdl2-net-dev \
   libpng-dev \
   libzip-dev \
   libbz2-dev \
@@ -71,7 +72,9 @@ cmake -S "$BUILD_DIR" -B "$CMAKE_BUILD" \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$SOH_DIR" \
   -DBUILD_SHARED_LIBS=OFF \
-  -DUSE_OPENGLES=ON
+  -DUSE_OPENGLES=ON \
+  -Dnlohmann_json_DIR=/usr/share/cmake/nlohmann_json \
+  -DCMAKE_PREFIX_PATH="/usr/share/cmake;/usr/lib/aarch64-linux-gnu/cmake"
 
 stamp "CMake configurado."
 
