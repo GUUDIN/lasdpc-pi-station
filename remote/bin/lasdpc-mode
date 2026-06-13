@@ -29,39 +29,52 @@ apply_media_target() {
   fi
 }
 
+kill_chromium_profile() {
+  local profile="$1"
+  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
+    case "$comm" in
+      chromium|systemd-inhibit)
+        case "$args" in
+          *"--user-data-dir="*"$profile"*) kill "$pid" 2>/dev/null || true ;;
+        esac
+        ;;
+    esac
+  done
+}
+
 # Encerra apenas apps gerenciados que nao pertencem ao novo modo.
 # O modo e gravado antes para o runner reagir rapido; por isso nao mate
 # o app-alvo aqui, ou um processo recem-lancado pode ser encerrado por corrida.
 kill_for_mode() {
   case "$NEW" in
     dashboard|menu)
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
+      kill_chromium_profile "chromium-kiosk"
+      kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
       ;;
     media)
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
+      kill_chromium_profile "chromium-kiosk"
+      kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
       ;;
     youtube)
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
+      kill_chromium_profile "chromium-kiosk"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true
       ;;
     games)
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
+      kill_chromium_profile "chromium-kiosk"
+      kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       ;;
     desktop)
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-kiosk' 2>/dev/null || true
-      pkill -f -- '--user-data-dir=.*/lasdpc/chromium-youtube-tv' 2>/dev/null || true
+      kill_chromium_profile "chromium-kiosk"
+      kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
       pkill -x ares 2>/dev/null || true

@@ -66,6 +66,15 @@ pi_ssh "set -euo pipefail
   sudo install -o root -g root -m 0755 /tmp/lasdpc-youtube /usr/local/bin/lasdpc-youtube
   sudo install -o root -g root -m 0755 /tmp/lasdpc-mode /usr/local/bin/lasdpc-mode
   sudo install -o root -g root -m 0755 /tmp/lasdpc-session /usr/local/bin/lasdpc-session
+  session_pids=\$(ps -u lasdpc -o pid=,comm=,args= | while read -r pid comm arg0 arg1 rest; do
+    if [ \"\$comm\" = \"bash\" ] && [ \"\$arg0\" = \"bash\" ] && [ \"\$arg1\" = \"/usr/local/bin/lasdpc-session\" ] && [ -z \"\${rest:-}\" ]; then
+      echo \"\$pid\"
+    fi
+  done)
+  if [ -n \"\$session_pids\" ]; then
+    kill \$session_pids || true
+    sleep 2
+  fi
 
   backup_file /opt/lasdpc-pi-station/launcher/index.html
   backup_file /opt/lasdpc-pi-station/launcher/server.py
