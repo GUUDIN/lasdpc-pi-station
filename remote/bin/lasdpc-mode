@@ -47,6 +47,12 @@ kill_esde() {
   pkill -x ES-DE 2>/dev/null || true
 }
 
+kill_ares() {
+  pkill -x ares 2>/dev/null || true
+  sleep 1
+  pkill -9 -x ares 2>/dev/null || true
+}
+
 # Encerra apenas apps gerenciados que nao pertencem ao novo modo.
 # O modo e gravado antes para o runner reagir rapido; por isso nao mate
 # o app-alvo aqui, ou um processo recem-lancado pode ser encerrado por corrida.
@@ -57,7 +63,7 @@ kill_for_mode() {
       kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
-      pkill -x ares 2>/dev/null || true
+      kill_ares
       kill_esde
       ;;
     media)
@@ -65,14 +71,14 @@ kill_for_mode() {
       kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
-      pkill -x ares 2>/dev/null || true
+      kill_ares
       kill_esde
       ;;
     youtube)
       kill_chromium_profile "chromium-kiosk"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
-      pkill -x ares 2>/dev/null || true
+      kill_ares
       kill_esde
       ;;
     games)
@@ -85,7 +91,7 @@ kill_for_mode() {
       kill_chromium_profile "chromium-youtube-tv"
       pkill -x kodi.bin 2>/dev/null || true; pkill -x kodi 2>/dev/null || true
       pkill -x emulationstation 2>/dev/null || true
-      pkill -x ares 2>/dev/null || true
+      kill_ares
       kill_esde
       ;;
   esac

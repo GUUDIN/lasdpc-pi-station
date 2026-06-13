@@ -46,7 +46,7 @@ run_app(){
         lasdpc-esde
       elif command -v ares >/dev/null 2>&1; then
         cd /srv/lasdpc-pi-station/roms 2>/dev/null || cd "$HOME"
-        MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 ares
+        GDK_BACKEND=wayland MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 ares
       elif command -v emulationstation >/dev/null 2>&1; then
         emulationstation
       else
