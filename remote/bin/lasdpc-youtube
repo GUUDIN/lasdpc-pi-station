@@ -53,10 +53,4 @@ if [ -n "${YOUTUBE_TV_UA:-}" ]; then
 fi
 
 logger -t lasdpc-youtube "abrindo $YOUTUBE_TV_URL"
-
-if command -v systemd-inhibit >/dev/null 2>&1; then
-  systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-youtube --mode=block "$CHROME" "${CHROME_ARGS[@]}" && exit 0
-  logger -t lasdpc-youtube "systemd-inhibit falhou; abrindo Chromium sem inhibit"
-fi
-
 exec "$CHROME" "${CHROME_ARGS[@]}"
