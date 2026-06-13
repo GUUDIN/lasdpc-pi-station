@@ -1,6 +1,32 @@
 # HANDOFF — LASDPC Pi Station
 
-Estado salvo em 2026-06-12, fim da sessao Codex.
+Estado salvo em 2026-06-13 (build SoH em andamento).
+
+## Atualizacao 2026-06-13 — Etapas 2/5/6 em progresso
+
+### Etapa 2 — UxPlay video corrigido
+
+- `lasdpc-uxplay`: `UXPLAY_VIDEO_SINK` era `0` (audio-only per docs). Corrigido para `waylandsink`.
+- UxPlay agora usa: `-vs waylandsink -fs -s 1920x1080@60 -nc`.
+- TC-2.x AirPlay video: MANUAL-PENDENTE (exige device Apple fisico).
+
+### Etapa 5 — Ship of Harkinian (OoT port)
+
+- Script: `remote/bin/lasdpc-soh-build.sh` — clone + cmake + ninja + install `/opt/soh/soh.elf`.
+- Deps descobertas iterativamente: `libsdl2-net-dev` adicionado (cmake falhou sem ela).
+- cmake fix: `-Dnlohmann_json_DIR=/usr/share/cmake/nlohmann_json` (path fora do search default).
+- Build iniciado 2026-06-13 ~09:57; cmake configurado em 217s; ninja compilando 1635 targets.
+- **Build a correr agora** — NAO reiniciar a Pi enquanto o build nao terminar.
+- Apos build: testar `/opt/soh/soh.elf`; usuario deve copiar ROM legal de OoT para
+  `/srv/lasdpc-pi-station/roms/n64/` antes do primeiro uso.
+
+### Etapa 6 — Operacionalizacao
+
+- **Tile "Como usar"** (helpPanel): confirmado visualmente no screenshot 2026-06-13.
+  Grid 3x3 completa: IoT / Dashboards / Midia / YouTube / Emulador / Desktop / Como usar / Reiniciar / Desligar.
+- **Backup diario**: `lasdpc-backup.service` + `lasdpc-backup.timer` deployados e ativos.
+  Proximo disparo: 2026-06-14 03:04 (3h da manha + randomized 10 min). Retem 7 dias.
+- **Reboot final**: PENDENTE — aguardar fim do build SoH.
 
 ## Atualizacao 2026-06-13 — Etapa 4 CONCLUIDA (gaming fullscreen confirmado)
 
