@@ -2,24 +2,25 @@
 
 Estado salvo em 2026-06-12, fim da sessao Codex.
 
-## Atualizacao 2026-06-13 — Etapa 4 (gaming) concluida com ressalva
+## Atualizacao 2026-06-13 — Etapa 4 CONCLUIDA (gaming fullscreen confirmado)
 
 - `make gaming-install` + `make gaming-check` (scripts 120/121): **AUTO PASS**.
   Instalados: RetroArch 1.20 (apt) + cores apt (nestopia/snes9x/genesis_plus_gx/gambatte)
-  + `parallel_n64` (buildbot, N64) + ES-DE 3.4.1 AppImage (`/opt/es-de`).
+  - `parallel_n64` (buildbot, N64) + ES-DE 3.4.1 AppImage (`/opt/es-de`).
 - **ES-DE NAO renderiza no Pi 4**: exige OpenGL desktop 3.3, o V3D entrega 3.1
   (GLXBadFBConfig / EGL_BAD_MATCH). `SDL_VIDEODRIVER=wayland` e `GALLIUM_DRIVER=zink`
   nao resolvem (AppImage empacota a stack GL). Detalhes em `docs/gaming.md`.
 - Por isso `lasdpc-mode games` usa **ares** por padrao; ES-DE so via
   `LASDPC_GAMES_FRONTEND=esde` (opt-in). `lasdpc-mode` ganhou `kill_esde()`.
-- **MANUAL-PENDENTE** (operador fora do lab): validar on-screen o modo `games`
-  (ares render + gamepad + desempenho N64). TCs manuais nao executados.
-- Commits: `2f83b08` (scaffolding), `9ddb5e6` (+x), `45dd609` (resultado/incompat).
+- **TC-4.4 CONFIRMADO** (screenshot grim 2026-06-13): ares v134 abre fullscreen
+  1920x1080 sem decoracoes. Requer `GDK_BACKEND=wayland` + regra `ToggleFullscreen`
+  no labwc (`/etc/xdg/labwc/rc.xml`, rastreado em `remote/kiosk/labwc-rc.xml`).
+- `lasdpc-mode` ganhou `kill_ares()` (SIGTERM + SIGKILL fallback; ares ignorava SIGTERM).
+- **MANUAL-PENDENTE**: gamepad + ROM real + desempenho N64 (TC-4.5 a 4.8).
+- Commits: `2f83b08`, `9ddb5e6`, `45dd609`, `b88e9b8` (fullscreen).
 
-Proximas frentes sugeridas: Etapa 5 (Ship of Harkinian p/ Ocarina — melhor caminho N64),
-Etapa 2 (AirPlay video best-effort) e Etapa 6 (operacionalizacao). Frontend de jogos
-no Pi4 segue em aberto: avaliar ES-DE build GLES, EmulationStation GLES/Pegasus, ou
-RetroArch direto.
+Proximas frentes: Etapa 2 (AirPlay video), Etapa 5 (Ship of Harkinian),
+Etapa 6 (operacionalizacao).
 
 ## Acesso
 
@@ -49,7 +50,7 @@ Nao use `http://100.84.255.77` sem porta: nao ha servico na porta 80.
 ## Servicos e URLs
 
 | Funcao | Porta/URL |
-|---|---|
+| --- | --- |
 | VNC | `100.84.255.77:5900` |
 | Homepage/dashboard IoT | `http://100.84.255.77:8080` |
 | Grafana | `http://100.84.255.77:3000` |

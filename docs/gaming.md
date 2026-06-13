@@ -40,8 +40,10 @@ Comportamento (atualizado na Etapa 4):
 3. Se `emulationstation` existir, e usado como ultimo fallback.
 4. Ao sair do emulador, volta automaticamente para `menu`.
 
-> **Validacao on-screen do modo `games` (ares/ES-DE) e MANUAL-PENDENTE** — exige
-> operador no lab com TV+gamepad. Os TCs automatizados (instalacao/presenca) passam.
+> **TC-4.4 CONFIRMADO** (2026-06-13): ares v134 abre fullscreen 1920x1080 sem
+> decoracoes na Pi 4, validado por screenshot grim. Requer `GDK_BACKEND=wayland`
+> (nativo Wayland) + regra `ToggleFullscreen` no `labwc-rc.xml`.
+> TCs manuais (gamepad/ROM/desempenho) seguem PENDENTES.
 
 Diretorio criado para ROMs legais de N64:
 
@@ -85,6 +87,7 @@ propria stack GL. **Por isso o modo `games` usa `ares` por padrao**, e o ES-DE f
 apenas como opt-in (`LASDPC_GAMES_FRONTEND=esde`) para futura investigacao.
 
 Caminhos para destravar o ES-DE (a validar on-screen, fora do escopo headless):
+
 - Build do ES-DE com renderer **OpenGL ES** (nao o AppImage desktop padrao); ou
 - Outro frontend que use GLES no Pi 4 (EmulationStation GLES, Pegasus); ou
 - Manter `ares`/RetroArch direto como frontend.
@@ -100,7 +103,7 @@ Para a imagem principal Debian/Trixie com dashboard, desktop e menu, a melhor di
 Opcoes avaliadas:
 
 | Opcao | Encaixe no projeto | Observacao |
-|---|---|---|
+| --- | --- | --- |
 | ES-DE | Melhor candidato para modo `games` na imagem atual | Frontend moderno, controle por gamepad, AppImage AArch64 oficial, suporte amplo a sistemas |
 | Pegasus | Alternativa leve e customizavel | Tem builds para Raspberry Pi e compatibilidade com metadados EmulationStation |
 | Batocera | Melhor experiencia dedicada de retrogaming | Excelente se a estacao for de jogos, mas e outra imagem/OS |
