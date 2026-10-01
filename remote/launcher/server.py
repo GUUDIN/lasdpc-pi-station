@@ -10,7 +10,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIND = ("127.0.0.1", 8090)
-MODES = {"dashboard", "menu", "media", "youtube", "games", "desktop"}
+MODES = {"dashboard", "menu", "media", "kodi", "tv", "musica", "youtube", "ytcast", "games", "desktop"}
+YTDLP = "/usr/local/bin/yt-dlp"
+# Atalhos fixos do modo TV/Esportes. URL de CANAL oficial (.../@handle/live) pega
+# a live ativa do canal certo — bem mais confiavel que busca por texto, que
+# retorna clones/re-transmissoes. yt-dlp resolve /live para a transmissao atual.
+TV_CHANNELS = [
+    {"name": "Cazé TV", "url": "https://www.youtube.com/@CazeTV/live"},
+    {"name": "Cazé TV 2", "url": "https://www.youtube.com/@CazeTV2/live"},
+    {"name": "GE (ge.globo)", "url": "https://www.youtube.com/@geglobo/live"},
+    {"name": "Jovem Pan News", "url": "https://www.youtube.com/@jovempannews/live"},
+]
 CONF_DIR = os.path.expanduser("~/.config/lasdpc")
 SESSION_ENV = os.path.join(CONF_DIR, "session.env")
 DASHBOARDS_FILE = os.path.join(CONF_DIR, "dashboards.json")
@@ -128,6 +138,53 @@ def dashboard_save(payload):
     dashboards_save(out)
     return item
 
+def sh_long(cmd, timeout=30):
+    try:
+        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout).stdout.strip()
+    except Exception:
+        return ""
+
+def tv_search(query, n=10):
+    """Busca no YouTube via yt-dlp (sem API key). Retorna metadados leves."""
+    query = str(query or "").strip()[:120]
+    if not query:
+        return []
+    out = sh_long([YTDLP, f"ytsearch{n}:{query}", "--flat-playlist",
+                   "--dump-json", "--no-warnings"], timeout=30)
+    results = []
+    for line in out.splitlines():
+        try:
+            d = json.loads(line)
+        except Exception:
+            continue
+        vid = d.get("id")
+        if not vid:
+            continue
+        results.append({
+            "id": vid,
+            "title": (d.get("title") or "")[:120],
+            "channel": (d.get("channel") or d.get("uploader") or "")[:80],
+            "live": bool(d.get("is_live")),
+            "duration": d.get("duration"),
+        })
+    return results
+
+def tv_play(payload):
+    """Toca uma URL especifica, ou resolve uma query (atalho) para a 1a live."""
+    url = str(payload.get("url") or "").strip()
+    query = str(payload.get("query") or "").strip()
+    if not url and query:
+        res = tv_search(query, 6)
+        # prefere transmissao ao vivo; senao o 1o resultado
+        live = [r for r in res if r["live"]]
+        pick = (live or res)[:1]
+        if pick:
+            url = f"https://www.youtube.com/watch?v={pick[0]['id']}"
+    if not valid_url(url):
+        raise ValueError("nenhum video encontrado")
+    subprocess.run(["lasdpc-play", url])
+    return url
+
 def net_ok():
     try:
         socket.setdefaulttimeout(2)
@@ -185,10 +242,43 @@ class H(BaseHTTPRequestHandler):
                     self._send(200, f.read(), "text/html; charset=utf-8")
             except Exception as e:
                 self._send(500, str(e), "text/plain")
+        elif self.path == "/musica.html":
+            try:
+                with open(os.path.join(HERE, "musica.html"), "rb") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            except Exception as e:
+                self._send(500, str(e), "text/plain")
+        elif self.path == "/ytcast.html":
+            try:
+                with open(os.path.join(HERE, "ytcast.html"), "rb") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            except Exception as e:
+                self._send(500, str(e), "text/plain")
+        elif self.path == "/api/ytcast/code":
+            # codigo de pareamento "Inserir codigo" escrito pelo receptor (node)
+            code = ""
+            try:
+                p = os.path.expanduser("~/.config/lasdpc/ytcast_code")
+                if os.path.exists(p):
+                    with open(p) as f:
+                        code = f.read().strip()
+            except Exception:
+                code = ""
+            self._send(200, json.dumps({"code": code}))
+        elif self.path == "/api/ytcast/status":
+            p = os.path.expanduser("~/.config/lasdpc/ytcast_status.json")
+            try:
+                with open(p) as f:
+                    data = json.load(f)
+            except Exception:
+                data = {"status": "unknown", "message": "Aguardando receiver"}
+            self._send(200, json.dumps(data, ensure_ascii=False))
         elif self.path == "/api/status":
             self._send(200, json.dumps(status()))
         elif self.path == "/api/dashboards":
             self._send(200, json.dumps(dashboards_load(), ensure_ascii=False))
+        elif self.path == "/api/tv/channels":
+            self._send(200, json.dumps({"channels": TV_CHANNELS}, ensure_ascii=False))
         else:
             self._send(404, "not found", "text/plain")
 
@@ -217,6 +307,18 @@ class H(BaseHTTPRequestHandler):
             try:
                 item = dashboard_save(self._json_body())
                 self._send(200, json.dumps({"ok": True, "dashboard": item}, ensure_ascii=False))
+            except Exception as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        elif p == "/api/tv/search":
+            try:
+                results = tv_search(self._json_body().get("query"), 12)
+                self._send(200, json.dumps({"ok": True, "results": results}, ensure_ascii=False))
+            except Exception as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        elif p == "/api/tv/play":
+            try:
+                url = tv_play(self._json_body())
+                self._send(200, json.dumps({"ok": True, "url": url}, ensure_ascii=False))
             except Exception as e:
                 self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
         else:

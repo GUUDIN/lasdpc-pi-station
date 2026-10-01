@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Carregando — LASDPC</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:#080b0f;color:#f6f7f8;
+       display:grid;place-items:center;text-align:center}
+  main{display:grid;gap:24px;justify-items:center}
+  .mark{width:92px;height:92px;border-radius:50%;border:8px solid #29313a;border-top-color:#f4c542;
+        animation:spin .8s linear infinite}
+  h1{font-size:42px;line-height:1.1;margin:0;font-weight:760}
+  p{margin:0;color:#b7c0ca;font-size:22px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+  <main>
+    <div class="mark" aria-hidden="true"></div>
+    <h1 id="msg">Carregando</h1>
+    <p>Preparando a tela...</p>
+  </main>
+<script>
+  const raw = decodeURIComponent((location.hash || '').slice(1).replace(/\+/g, ' ')).trim();
+  if (raw) document.getElementById('msg').textContent = raw;
+</script>
+</body>
+</html>

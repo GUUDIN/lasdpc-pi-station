@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YouTube — LASDPC</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#1a0606,#2a0d0d);
+       color:#f2e9e9;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:28px;padding:5vw}
+  /* logo play do YouTube */
+  .yt{width:11rem;height:7.7rem;background:#ff0000;border-radius:1.6rem;display:flex;align-items:center;justify-content:center;
+      filter:drop-shadow(0 8px 28px rgba(255,0,0,.45))}
+  .yt::after{content:"";border-style:solid;border-width:2.0rem 0 2.0rem 3.2rem;border-color:transparent transparent transparent #fff}
+  h1{font-size:3rem;margin:0;letter-spacing:.5px}
+  .steps{font-size:1.6rem;line-height:1.9;color:#ecc9c9;max-width:920px}
+  .dev{display:inline-block;background:#ff0000;color:#fff;font-weight:800;border-radius:12px;padding:6px 18px;margin:0 4px}
+  .num{display:inline-flex;width:2.2rem;height:2.2rem;border-radius:50%;background:#ff0000;color:#fff;
+       font-weight:800;align-items:center;justify-content:center;margin-right:12px;vertical-align:middle}
+  .hint{font-size:1.15rem;color:#b08a8a;margin-top:10px}
+  .wait{font-size:1.2rem;color:#ff5252}
+  .pulse{animation:p 1.6s ease-in-out infinite}@keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
+  .status{font-size:1.35rem;color:#ff6b6b;min-height:1.8em}
+  .status.loading::before{content:"";display:inline-block;width:.9em;height:.9em;border:3px solid rgba(255,255,255,.25);
+    border-top-color:#ff5252;border-radius:50%;animation:spin .9s linear infinite;margin-right:10px;vertical-align:-.12em}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .status.connected{color:#ffb4b4}
+  .status.playing{color:#ffd1d1}
+  .status.error{color:#ff8a8a}
+  .code{margin-top:6px;font-size:1.15rem;color:#ecc9c9;min-height:1.6em}
+  .code b{font-size:1.7rem;letter-spacing:.18em;color:#fff;background:#3a1414;border-radius:10px;padding:4px 14px;margin-left:8px}
+  .hidden{display:none}
+</style>
+</head>
+<body>
+  <div class="yt" aria-label="YouTube"></div>
+  <h1>YouTube pela TV</h1>
+  <div class="steps">
+    <div><span class="num">1</span>Abra o <b>YouTube</b> no seu celular (mesma rede Wi-Fi)</div>
+    <div><span class="num">2</span>Toque em <b>Transmitir</b> / <b>Conectar à TV</b> 📺</div>
+    <div><span class="num">3</span>Escolha <span class="dev">TV LASDPC</span></div>
+  </div>
+  <div id="status" class="status pulse">aguardando conexão do YouTube...</div>
+  <div id="codebox" class="code hidden">Não apareceu? Em <b style="background:none;font-size:1.15rem;letter-spacing:normal;padding:0">Configurações → Assistir na TV → Inserir código</b>, digite:<b id="code"></b></div>
+  <div class="hint">Super+Esc volta ao menu • o vídeo abre em tela cheia com decode por hardware</div>
+<script>
+  const statusEl = document.getElementById('status');
+  const box = document.getElementById('codebox');
+  const codeEl = document.getElementById('code');
+
+  async function poll(){
+    try{
+      const [sr, cr] = await Promise.all([
+        fetch('/api/ytcast/status',{cache:'no-store'}),
+        fetch('/api/ytcast/code',{cache:'no-store'})
+      ]);
+      const s = await sr.json();
+      const c = await cr.json();
+      const state = (s && s.status) || 'idle';
+      statusEl.className = 'status ' + (state === 'idle' ? 'pulse' : state);
+      statusEl.textContent = (s && s.message) || 'aguardando conexão do YouTube...';
+      if(c && c.code && !['connected','loading','playing'].includes(state)){
+        codeEl.textContent = c.code;
+        box.classList.remove('hidden');
+      } else {
+        box.classList.add('hidden');
+      }
+    }catch(e){ /* server pode nao estar pronto */ }
+  }
+  poll(); setInterval(poll, 1000);
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-mpv <url> — toca uma URL (YouTube/live) em fullscreen no Pi 4.
+# DECODE POR HARDWARE (zero-copy): --vo=dmabuf-wayland + --hwdec=v4l2m2m entrega
+# o frame decodificado direto ao compositor Wayland, SEM memcpy (o --hwdec=*-copy
+# satura a banda de RAM em 1080p60 e trava) e SEM o upload-pra-GPU do --vo=gpu
+# que dava TELA AZUL. O Pi 4 (VideoCore VI) so tem decode de H.264/H.265 no
+# silicio -> forcamos avc1 (H.264). VP9/AV1 (padrao do YouTube) nao existem no
+# hardware: cairiam em software e travam. Por isso 1080p e o teto realista (YT so
+# serve H.264 ate 1080p; 1440p/4K sao VP9/AV1 puro -> impossivel aqui).
+# Validado: 1080p60 H.264 ~1% drops, mpv ~35% CPU (era 185% em software).
+# Override: LASDPC_TV_MAXHEIGHT=720. Fallback automatico p/ software se o HW falhar.
+# Roda DENTRO da sessao Wayland (lancado pelo lasdpc-session no modo tv).
+# ============================================================
+set -u
+URL="${1:-}"
+[ -n "$URL" ] || { echo "uso: lasdpc-mpv <url>"; exit 1; }
+MAXH="${LASDPC_TV_MAXHEIGHT:-1080}"
+
+# Preferencia: H.264 ate MAXH; cai para qualquer codec se nao houver H.264.
+FMT="bestvideo[vcodec^=avc1][height<=${MAXH}]+bestaudio/best[vcodec^=avc1][height<=${MAXH}]/best[height<=${MAXH}]"
+
+COMMON=(
+  --fullscreen
+  --script-opts=ytdl_hook-ytdl_path=/usr/local/bin/yt-dlp
+  --ytdl-format="$FMT"
+  --cursor-autohide=500
+  --force-window=yes
+  --keep-open=no
+  --osc=yes
+)
+
+logger -t lasdpc-mpv "abrindo $URL (max ${MAXH}p, HW zero-copy)"
+mpv --vo=dmabuf-wayland --hwdec=v4l2m2m "${COMMON[@]}" "$URL"
+rc=$?
+
+# rc 0 = fim normal; 4 = saida pelo usuario (tecla q). Qualquer outro codigo
+# (ex.: VO dmabuf-wayland indisponivel num mpv antigo) cai para software para
+# nao deixar a tela preta.
+if [ "$rc" -ne 0 ] && [ "$rc" -ne 4 ]; then
+  logger -t lasdpc-mpv "caminho HW falhou (rc=$rc); fallback software"
+  exec mpv --vo=gpu --hwdec=no "${COMMON[@]}" "$URL"
+fi

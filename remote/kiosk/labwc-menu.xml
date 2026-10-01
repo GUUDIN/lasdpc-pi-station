@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<openbox_menu>
+  <menu id="root-menu" label="LASDPC">
+    <item label="⌂  Voltar ao menu LASDPC">
+      <action name="Execute">
+        <command>lasdpc-mode menu</command>
+      </action>
+    </item>
+    <separator />
+    <item label="Dashboard IoT">
+      <action name="Execute">
+        <command>lasdpc-mode dashboard</command>
+      </action>
+    </item>
+    <item label="Mídia (Kodi)">
+      <action name="Execute">
+        <command>lasdpc-mode media</command>
+      </action>
+    </item>
+    <item label="Emulador">
+      <action name="Execute">
+        <command>lasdpc-mode games</command>
+      </action>
+    </item>
+    <separator />
+    <item label="Terminal">
+      <action name="Execute">
+        <command>lxterminal</command>
+      </action>
+    </item>
+    <separator />
+    <item label="Reiniciar">
+      <action name="Execute">
+        <command>pishutdown reboot</command>
+      </action>
+    </item>
+    <item label="Desligar">
+      <action name="Execute">
+        <command>pishutdown</command>
+      </action>
+    </item>
+  </menu>
+</openbox_menu>

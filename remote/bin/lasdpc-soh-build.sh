@@ -87,24 +87,49 @@ stamp "Build concluído."
 # ── 5. Install ───────────────────────────────────────────────
 stamp "Instalando em $SOH_DIR..."
 sudo mkdir -p "$SOH_DIR"
-# soh.o2r é gerado na 1ª run com a ROM — não é artifact de build; ignorar erro de install
 sudo ninja -C "$CMAKE_BUILD" install || true
 # Garante executável acessível
 [ -f "$SOH_DIR/soh.elf" ] || { stamp "ERRO: soh.elf não encontrado após install"; exit 1; }
 sudo chmod +x "$SOH_DIR/soh.elf"
+
+# IMPORTANTE: os assets do PORT (soh.otr/soh.o2r) sao gerados NO BUILD (nao na 1a
+# run — so o oot.otr da ROM e gerado na 1a run). O target install nem sempre os
+# copia; sem eles o SoH nao abre. Copiamos explicitamente do build dir.
+# (Bug da build de 13/06: ficaram em /tmp e se perderam no reboot.)
+SOH_ASSET=$(find "$CMAKE_BUILD" -maxdepth 3 \( -name "soh.otr" -o -name "soh.o2r" \) 2>/dev/null | head -1)
+if [ -n "$SOH_ASSET" ]; then
+  sudo cp "$SOH_ASSET" "$SOH_DIR/"
+  stamp "Assets do port instalados: $(basename "$SOH_ASSET")"
+else
+  stamp "AVISO: soh.otr/soh.o2r nao encontrado no build dir — o SoH pode nao abrir"
+fi
 stamp "Instalado: $(ls -lh "$SOH_DIR/soh.elf")"
 
-# ── 6. Wrapper ───────────────────────────────────────────────
+# ── 6. Diretorio de dados gravavel + assets ──────────────────
+# /opt/soh e root-only; o SoH (rodando como lasdpc) precisa de um CWD gravavel
+# para gerar o oot.otr a partir da ROM e guardar saves/config.
+SOH_DATA=/srv/lasdpc-pi-station/soh
+sudo mkdir -p "$SOH_DATA"
+sudo chown "$(id -un):$(id -gn)" "$SOH_DATA"
+# Linka os assets read-only do port para o dir de trabalho
+for a in soh.otr soh.o2r; do
+  [ -f "$SOH_DIR/$a" ] && ln -sf "$SOH_DIR/$a" "$SOH_DATA/$a"
+done
+# Linka a ROM de OoT (1a run extrai o oot.otr a partir dela)
+OOT_ROM=$(find /srv/lasdpc-pi-station/roms/n64 -iname "*ocarina*of*time*.z64" 2>/dev/null | head -1)
+[ -n "$OOT_ROM" ] && ln -sf "$OOT_ROM" "$SOH_DATA/oot.z64"
+
+# ── 7. Wrapper ───────────────────────────────────────────────
 sudo tee /usr/local/bin/lasdpc-soh > /dev/null << 'WRAPPER'
 #!/usr/bin/env bash
 # Abre Ship of Harkinian (Ocarina of Time port).
-# Coloque a ROM legal em /srv/lasdpc-pi-station/roms/n64/ e rode uma vez para extrair.
-ROM_DIR=/srv/lasdpc-pi-station/roms/n64
-cd /opt/soh
+# Roda a partir de um dir gravavel; na 1a vez extrai o oot.otr da ROM linkada.
+SOH_DATA=/srv/lasdpc-pi-station/soh
+cd "$SOH_DATA" || cd /opt/soh
 exec /opt/soh/soh.elf "$@"
 WRAPPER
 sudo chmod +x /usr/local/bin/lasdpc-soh
 
 stamp "=== Ship of Harkinian instalado com sucesso ==="
-stamp "Próximo passo: copiar ROM legal de Ocarina of Time para $ROM_DIR"
-stamp "e executar: lasdpc-mode games  (ou lasdpc-soh diretamente)"
+stamp "Dir de dados: $SOH_DATA (oot.z64 linkada; oot.otr gerado na 1a execucao)"
+stamp "Rode: lasdpc-soh  (1a vez extrai assets da ROM; precisa de tela)"

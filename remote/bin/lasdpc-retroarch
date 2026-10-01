@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-retroarch — abre o RetroArch em fullscreen (frontend de emulacao).
+# Roda DENTRO da sessao Wayland (lancado pelo lasdpc-session no modo games).
+# Driver de video: Vulkan (usa a GPU V3D real do Pi4); menu Ozone.
+# Sai quando o RetroArch fecha (Quit no menu); o lasdpc-session volta ao menu.
+# ============================================================
+set -u
+
+# Garante o renderer N64 por Vulkan (parallel-rdp) nas core options.
+# Idempotente: so escreve se faltar, nao sobrescreve ajustes do usuario.
+COREOPTS="${HOME}/.config/retroarch/retroarch-core-options.cfg"
+if [ ! -f "$COREOPTS" ] || ! grep -q '^parallel-n64-gfxplugin' "$COREOPTS" 2>/dev/null; then
+  mkdir -p "$(dirname "$COREOPTS")"
+  {
+    echo 'parallel-n64-gfxplugin = "parallel"'
+    echo 'parallel-n64-parallel-rdp-upscaling = "1x"'
+    echo 'parallel-n64-screensize = "640x480"'
+  } >> "$COREOPTS"
+fi
+
+logger -t lasdpc-retroarch "abrindo RetroArch (vulkan/ozone)"
+exec retroarch --fullscreen

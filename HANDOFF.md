@@ -1,6 +1,112 @@
 # HANDOFF — LASDPC Pi Station
 
-Estado salvo em 2026-06-13 (build SoH em andamento).
+Estado salvo em 2026-06-19 (entretenimento + redesign do menu).
+
+## Atualizacao 2026-06-24 — YouTube 1080p HW + Cast pelo celular
+
+- `remote/bin/lasdpc-mpv`: caminho validado no Pi 4 agora e
+  `--vo=dmabuf-wayland --hwdec=v4l2m2m`, forçando H.264/`avc1` ate 1080p.
+  O antigo `v4l2m2m-copy` copiava frames para RAM e travava em 1080p60; o
+  zero-copy estabilizou a reproducao. Ha fallback automatico para software se o
+  caminho HW falhar.
+- VP9/AV1 continuam impossiveis por hardware no BCM2711: o silicio do Pi 4 tem
+  blocos para H.264 e H.265/HEVC, nao para VP9/AV1. YouTube acima de 1080p tende
+  a exigir VP9/AV1, entao o teto realista desta estacao e 1080p H.264.
+- `remote/bin/lasdpc-mode`: `kill_kodi()` robusto mata `kodi-standalone` e
+  `kodi.bin` para evitar Kodi orfao vazando por tras dos modos.
+- Novo modo `ytcast`: o celular pareia como YouTube TV, mas quem toca o video e
+  o `mpv` acelerado por hardware. Arquivos principais:
+  `remote/ytcast/index.js`, `remote/bin/lasdpc-ytcast`,
+  `remote/launcher/ytcast.html`, `scripts/170-ytcast.sh`.
+- Ajuste posterior: durante playback, o `lasdpc-session` mata o Chromium da tela
+  ociosa `ytcast.html` para nao roubar CPU/GPU por tras do `mpv`. O perfil
+  default do cast passou a ser `LASDPC_YTCAST_QUALITY=1080`: exige H.264
+  >=1080p ate o teto `MAXH` (padrao 1080). Validado para a live
+  `ioH5k4ss_tY`: `format=301 height=1080 fps=60 vcodec=avc1.4D402A`.
+  Para voltar a priorizar fluidez/temperatura, usar
+  `LASDPC_YTCAST_QUALITY=smooth`; para qualidade maxima ate `MAXH`, usar
+  `LASDPC_YTCAST_QUALITY=max`.
+- Validado na Pi: `lasdpc-mode ytcast` permanece estavel, Chromium abre
+  `ytcast.html`, receiver Node escuta em `*:3232`, e `/api/ytcast/code` retorna
+  codigo de pareamento. A sessao grafica precisou ser relancada para carregar o
+  `lasdpc-session` novo.
+- Correcao posterior do cast: remover `--ytdl-raw-options=...write-auto-subs...`
+  do `remote/ytcast/index.js`; no mpv 0.40 do Pi ela abortava com
+  `Expected '=' and a value` antes de abrir o video. Teste direto com as flags
+  atuais ficou rodando ate `timeout` (`rc=124`), indicando que o mpv abriu.
+- `remote/ytcast/index.js` agora registra status/log persistente em
+  `~/.config/lasdpc/ytcast_status.json` e `ytcast.log`, e usa data store em
+  arquivo (`ytcast_store.json`) para manter `app.pid`/MDX estaveis sem o
+  `node-persist` quebrado.
+- `remote/bin/lasdpc-session` relanca o receiver se o Node morrer, mata receivers
+  orfaos antes de subir outro e limpa Chromium `chromium-ytcast` antigo para nao
+  duplicar CPU/GPU. Isso tambem evita `DialServerError EADDRINUSE` em `*:3232`.
+- Transicoes de app: novo `remote/bin/lasdpc-loading` gera uma imagem fullscreen
+  e a exibe com `mpv --ontop --title="LASDPC Loading"`. `lasdpc-mode` inicia o
+  loading antes de matar o app atual; `lasdpc-session` remove o loading depois
+  que o app alvo foi lancado. Isso reduz/evita o desktop vazio entre menu,
+  musica, dashboard, jogos, Kodi, TV e ytcast. Para o cast, o estado
+  `ytcast_state=loading` tambem mostra o loading enquanto o mpv resolve/abre o
+  video.
+- Limite de integracao: `yt-cast-receiver` nao expoe controle de qualidade ou
+  captions do app do YouTube. A API do player implementavel so cobre play,
+  pause/resume, stop, seek, volume e fila. Qualidade/crop/captions precisam ser
+  politica local do mpv/yt-dlp, nao controle nativo do app.
+- Para diagnosticar lives HLS com imagem deslocada, o receiver aceita knobs
+  opcionais via `session.env`: `LASDPC_YTCAST_VIDEO_ZOOM`,
+  `LASDPC_YTCAST_VIDEO_PAN_X`, `LASDPC_YTCAST_VIDEO_PAN_Y`. Nao deixar esses
+  valores ligados por padrao: o teste com `VIDEO_ZOOM=0.263034` e
+  `VIDEO_PAN_Y=-0.17` piorou o enquadramento e foi revertido ao vivo
+  (`video-zoom=0`, `video-pan-x=0`, `video-pan-y=0`) e removido do
+  `session.env`.
+- Firewall ainda nao foi alterado nesta sessao. Se o app do YouTube nao descobrir
+  "TV LASDPC" automaticamente, liberar no UFW: `1900/udp` (SSDP), `3232/tcp`
+  (DIAL) e, se necessario para descoberta local, `5353/udp` (mDNS). O pareamento
+  manual por codigo deve funcionar pela tela `ytcast.html`.
+
+## Atualizacao 2026-06-19 — Entretenimento completo + UX do menu
+
+Reproduzivel via `make entertainment` (script `160-entertainment.sh`, idempotente).
+
+### Menu redesenhado (UX)
+- `remote/launcher/index.html` reescrito: 5 apps grandes (Dashboard, Video, Musica,
+  Jogo, Desktop) + barra de sistema discreta (Ajustes, Como usar, Energia).
+  Config (URLs dashboard / AirPlay) movida para painel "Ajustes"; energia num painel
+  com confirmacao. Resolve o "tudo misturado".
+- Fonte `fonts-noto-color-emoji` instalada (icones do menu renderizavam como quadrados).
+- Navegacao setas/gamepad; sair de qualquer app = Super+Esc.
+
+### Video / YouTube (modo `tv`) — mpv + yt-dlp, SEM API key
+- `lasdpc-mpv` (mpv) + `lasdpc-play` + endpoints `/api/tv/{channels,search,play}` no
+  `server.py`. Painel "Video" com atalhos de canais (URL oficial `@CazeTV/live` etc) +
+  busca por texto (ytsearch). Tile abre o painel.
+- **DECODE POR SOFTWARE** (`--hwdec=no`): o `hwdec=v4l2m2m` deste Pi/Wayland da TELA AZUL
+  (mapping DRM dmabuf falha). H.264 720p por software = 0 drops (liso). 1080p60 dropa
+  (~20%) — 720p e o teto fluido. Forca avc1 via yt-dlp (controle de codec que o
+  navegador nao dava; o YouTube TV no Chromium ficava preso em 480p/VP9 e travado).
+- `deno` instalado (yt-dlp exige JS runtime) + timer `yt-dlp-update.timer` (semanal).
+
+### Musica / Spotify (modo `musica`)
+- Raspotify renomeado para **"TV LASDPC"**. Modo `musica` abre tela de espera
+  `musica.html` (Chromium kiosk) com instrucoes; audio sai pelo HDMI via Spotify Connect.
+
+### Jogo / Zelda OoT (modo `games`) — RetroArch, NAO Ship of Harkinian
+- **SoH abandonado** (build falhou 2x + so roda OoT). OoT roda no **RetroArch** via
+  `parallel_n64` + **parallel-rdp (Vulkan)** — renderiza perfeito (Vulkan funciona; o GL/
+  v4l2 nao). `lasdpc-retroarch-setup.sh` configura: Vulkan/Ozone, fullscreen, playlist N64
+  (5 jogos) + thumbnails, e CONTROLE de teclado jogavel: movimento no ANALOGICO (setas),
+  A=X B=Z Start=Enter trava-alvo=Shift; `input_exit_emulator=nul` (sai so via Super+Esc).
+- N64 generico (ares/mupen/GLideN64) NAO funciona no Pi4 (exige OpenGL desktop). Vulkan
+  (parallel-rdp) e o caminho.
+
+### Limites de hardware confirmados (Pi 4)
+- Sem decode HW de VP9/AV1; H.264 ate 1080p (mas 1080p60 dropa). Video fluido = 720p.
+- N64: so via Vulkan/parallel-rdp. Emuladores GL desktop falham.
+- `hwdec=v4l2m2m` no mpv = tela azul; usar software decode.
+
+---
+
+## Atualizacao 2026-06-13 (estado anterior) — Etapas 2/5/6 em progresso
 
 ## Atualizacao 2026-06-13 — Etapas 2/5/6 em progresso
 

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "LASDPC h264ify",
+  "version": "1.0",
+  "description": "Forca o YouTube a entregar H.264 (decodavel por hardware no Pi 4) em vez de VP9/AV1.",
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    }
+  ]
+}

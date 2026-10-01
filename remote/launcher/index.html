@@ -8,182 +8,267 @@
   :root{ color-scheme: dark; --bg:#0b1020; --fg:#e6e9f2; --muted:#8b93ad; --accent:#3b82f6; --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; }
   *{box-sizing:border-box}
   html,body{height:100%;margin:0}
-  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--fg);
-       display:flex;flex-direction:column;min-height:100vh}
-  header{display:flex;justify-content:space-between;align-items:center;padding:24px 40px;border-bottom:1px solid #1c2540}
-  header h1{font-size:1.8rem;margin:0;letter-spacing:.5px}
-  .badges{display:flex;gap:18px;font-size:1.05rem;color:var(--muted);flex-wrap:wrap}
+  body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#142046,#0b1020);
+       color:var(--fg);display:flex;flex-direction:column;min-height:100vh}
+  header{display:flex;justify-content:space-between;align-items:center;padding:22px 44px}
+  header h1{font-size:1.5rem;margin:0;letter-spacing:.5px;color:#cdd6f4}
+  .badges{display:flex;gap:18px;font-size:1rem;color:var(--muted);flex-wrap:wrap}
   .badge b{color:var(--fg)}
-  .dot{display:inline-block;width:11px;height:11px;border-radius:50%;vertical-align:middle;margin-right:6px}
-  main{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:26px;padding:40px;align-content:center}
-  .tile{background:#121a33;border:2px solid #1f2b4d;border-radius:20px;padding:38px 24px;text-align:center;
-        cursor:pointer;transition:transform .08s,border-color .08s,background .08s;outline:none}
-  .tile:focus,.tile:hover{transform:translateY(-3px);border-color:var(--accent);background:#16204200}
-  .tile.focus{border-color:var(--accent);background:#172044;box-shadow:0 0 0 3px rgba(59,130,246,.35)}
-  .tile .ico{font-size:3.2rem;line-height:1}
-  .tile .ico svg{width:1em;height:1em;display:inline-block;vertical-align:-.12em;stroke:currentColor}
-  .tile .lbl{font-size:1.5rem;margin-top:14px;font-weight:600}
-  .tile .sub{font-size:.95rem;color:var(--muted);margin-top:6px}
-  .tile.danger.focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.35)}
-  .panel{position:fixed;inset:78px 5vw auto 5vw;max-height:78vh;overflow:auto;background:#10182f;border:1px solid #2a3761;border-radius:14px;box-shadow:0 24px 80px rgba(0,0,0,.45);padding:22px;z-index:5}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px}
+
+  main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:30px;padding:10px 44px 30px}
+  .apps{display:grid;grid-template-columns:repeat(5,1fr);gap:22px}
+  .tile{background:linear-gradient(160deg,#161f3d,#121a33);border:2px solid #243156;border-radius:22px;
+        padding:42px 18px;text-align:center;cursor:pointer;transition:transform .1s,border-color .1s,box-shadow .1s;outline:none}
+  .tile:hover{transform:translateY(-4px)}
+  .tile.focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.3),0 18px 40px rgba(0,0,0,.4);transform:translateY(-4px)}
+  .tile .ico{font-size:3.6rem;line-height:1}
+  .tile .lbl{font-size:1.45rem;margin-top:16px;font-weight:650}
+  .tile .sub{font-size:.92rem;color:var(--muted);margin-top:6px}
+
+  .sysbar{display:flex;justify-content:center;gap:14px}
+  .subtile{display:flex;align-items:center;gap:10px;background:#0e1530;border:1px solid #222d4f;border-radius:12px;
+           padding:12px 22px;cursor:pointer;color:var(--muted);font-size:1.05rem;transition:border-color .1s,color .1s;outline:none}
+  .subtile:hover{color:var(--fg)}
+  .subtile.focus{border-color:var(--accent);color:var(--fg);box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+  .subtile.danger.focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.3)}
+  .subtile .ico{font-size:1.3rem}
+
+  .panel{position:fixed;inset:70px 6vw auto 6vw;max-height:80vh;overflow:auto;background:#10182f;border:1px solid #2a3761;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5);padding:24px;z-index:5}
   .panel[hidden]{display:none}
   .panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
-  .panel h2{font-size:1.25rem;margin:0}
-  .close,.btn{border:1px solid #35466f;background:#172044;color:var(--fg);border-radius:8px;padding:10px 14px;font:inherit;cursor:pointer}
+  .panel h2{font-size:1.3rem;margin:0}
+  .close,.btn{border:1px solid #35466f;background:#172044;color:var(--fg);border-radius:10px;padding:11px 16px;font:inherit;cursor:pointer}
   .btn.primary{border-color:var(--accent);background:#1d4ed8}
-  .dash-list{display:grid;gap:10px;margin-bottom:18px}
+  .btn.big{font-size:1.2rem;padding:16px 22px;width:100%}
+  .btn.danger{border-color:var(--bad);background:#7f1d1d}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .dash-list{display:grid;gap:10px;margin:14px 0}
   .dash-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid #243253;border-radius:10px;padding:12px;background:#121a33}
   .dash-name{font-weight:650}
   .dash-url{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
   .dash-current{color:var(--ok);font-size:.9rem;margin-top:4px}
-  .dash-form{display:grid;grid-template-columns:1fr 2fr auto;gap:10px}
-  input{width:100%;border:1px solid #35466f;background:#0b1020;color:var(--fg);border-radius:8px;padding:11px 12px;font:inherit}
-  footer{padding:14px 40px;color:var(--muted);font-size:.95rem;border-top:1px solid #1c2540;text-align:center}
+  .dash-form{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;margin-top:10px}
+  .sec-title{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 8px}
+  input{width:100%;border:1px solid #35466f;background:#0b1020;color:var(--fg);border-radius:10px;padding:12px 13px;font:inherit}
+  footer{padding:12px 40px;color:var(--muted);font-size:.9rem;text-align:center}
   kbd{background:#1f2b4d;border-radius:6px;padding:2px 8px;font-size:.9em}
-  @media (max-width:850px){main{grid-template-columns:1fr 1fr;padding:24px}.dash-row,.dash-form{grid-template-columns:1fr}.panel{inset:60px 18px auto 18px}}
+  @media (max-width:1100px){.apps{grid-template-columns:repeat(3,1fr)}}
+  @media (max-width:680px){.apps{grid-template-columns:repeat(2,1fr)}.dash-row,.dash-form,.row2{grid-template-columns:1fr}.panel{inset:50px 16px auto 16px}}
 </style>
 </head>
 <body>
 <header>
   <h1>⬢ LASDPC Station</h1>
   <div class="badges">
-    <span class="badge"><span id="netdot" class="dot"></span>Rede: <b id="net">…</b></span>
+    <span class="badge"><span id="netdot" class="dot"></span><b id="net">…</b></span>
     <span class="badge">🌡️ <b id="temp">…</b></span>
     <span class="badge">📡 <b id="ip">…</b></span>
     <span class="badge">📦 <b id="cont">…</b></span>
   </div>
 </header>
 
-<main id="grid">
-  <div class="tile" data-action="mode/dashboard"><div class="ico">📊</div><div class="lbl">Dashboard IoT</div><div class="sub">Chromium kiosk</div></div>
-  <div class="tile" data-action="ui/dashboards"><div class="ico">⚙️</div><div class="lbl">Dashboards</div><div class="sub">Escolher URL</div></div>
-  <div class="tile" data-action="mode/media"><div class="ico">📡</div><div class="lbl">Mídia</div><div class="sub">AirPlay + Spotify</div></div>
-  <div class="tile" data-action="mode/youtube"><div class="ico">▶</div><div class="lbl">YouTube na TV</div><div class="sub">parear pelo celular</div></div>
-  <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Emulador</div><div class="sub">ares multi-sistema</div></div>
-  <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">Ambiente normal</div></div>
-  <div class="tile" data-action="ui/help"><div class="ico">ℹ️</div><div class="lbl">Como usar</div><div class="sub">Guia da estação</div></div>
-  <div class="tile danger" data-action="power/reboot" data-confirm="Reiniciar a estação?"><div class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div><div class="lbl">Reiniciar</div></div>
-  <div class="tile danger" data-action="power/shutdown" data-confirm="Desligar a estação?"><div class="ico">⏻</div><div class="lbl">Desligar</div></div>
+<main>
+  <!-- 5 funções principais -->
+  <section class="apps" id="apps">
+    <div class="tile" data-action="mode/dashboard"><div class="ico">📊</div><div class="lbl">Dashboard</div><div class="sub">painéis IoT</div></div>
+    <div class="tile" data-action="ui/tv"><div class="ico">📺</div><div class="lbl">Vídeo</div><div class="sub">YouTube • esportes</div></div>
+    <div class="tile" data-action="mode/ytcast"><div class="ico">📱</div><div class="lbl">YouTube</div><div class="sub">transmitir do celular</div></div>
+    <div class="tile" data-action="mode/musica"><div class="ico">🎵</div><div class="lbl">Música</div><div class="sub">Spotify</div></div>
+    <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Jogo</div><div class="sub">Zelda • N64</div></div>
+    <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">ambiente normal</div></div>
+  </section>
+
+  <!-- sistema / configuração (secundário) -->
+  <section class="sysbar" id="sysbar">
+    <div class="subtile" data-action="ui/settings"><span class="ico">⚙️</span> Ajustes</div>
+    <div class="subtile" data-action="ui/help"><span class="ico">ℹ️</span> Como usar</div>
+    <div class="subtile danger" data-action="ui/energy"><span class="ico">⏻</span> Energia</div>
+  </section>
 </main>
 
-<section class="panel" id="helpPanel" hidden>
-  <div class="panel-head">
-    <h2>ℹ️ Como usar esta estação</h2>
-    <button class="close" id="helpClose">Fechar</button>
-  </div>
-  <div style="display:grid;gap:14px;font-size:1rem;line-height:1.55">
-    <div><b>📊 Dashboard IoT</b> — abre o painel de monitoramento IoT em tela cheia (Grafana / Homepage).</div>
-    <div><b>⚙️ Dashboards</b> — escolhe qual URL exibir no modo dashboard. Útil para projetar qualquer painel da rede.</div>
-    <div><b>📡 Mídia (AirPlay)</b> — ativa o receptor AirPlay. No iPhone/iPad/Mac vá em <em>Espelhamento de Tela</em> e selecione <em>TV LASDPC …</em>. A TV exibe o conteúdo imediatamente.</div>
-    <div><b>▶ YouTube na TV</b> — abre o YouTube em modo TV. No celular/tablet, toque no ícone <em>Cast</em> dentro do YouTube e selecione esta TV. Use o celular como controle remoto.</div>
-    <div><b>🎮 Emulador</b> — abre o emulador <em>ares</em> em tela cheia. Conecte um controle USB/Bluetooth e use <em>Load</em> para carregar uma ROM. ROMs ficam em <code>/srv/lasdpc-pi-station/roms/</code>.</div>
-    <div><b>🖥️ Desktop</b> — exibe o ambiente gráfico normal (Wayland/labwc). Útil para tarefas administrativas locais.</div>
-    <hr style="border-color:#1f2b4d;margin:4px 0">
-    <div><b>Administração remota:</b> <code>ssh lasdpc@100.84.255.77</code> (via Tailscale) ou <code>ssh lasdpc@10.0.1.218</code> (LAN). Serviços: Node-RED :1880 · Grafana :3000 · InfluxDB :8086 · Mosquitto :1883.</div>
-    <div style="color:var(--muted);font-size:.9rem">Temperatura máxima recomendada: 80 °C. Em caso de tela preta ou travamento, use <em>Reiniciar</em>. Em caso de corte de energia, religue a fonte — o sistema inicia automaticamente.</div>
-  </div>
+<!-- PAINEL: Vídeo (YouTube/Esportes) -->
+<section class="panel" id="tvPanel" hidden>
+  <div class="panel-head"><h2>📺 Vídeo — YouTube / Esportes</h2><button class="close" id="tvClose">Fechar</button></div>
+  <div class="sec-title">Canais ao vivo</div>
+  <div id="tvChannels" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px"></div>
+  <div class="sec-title">Buscar</div>
+  <form id="tvForm" style="display:flex;gap:10px;margin-bottom:14px">
+    <input id="tvQuery" placeholder="ex: brasil x argentina, lo-fi, documentário…" autocomplete="off">
+    <button class="btn primary" type="submit">Buscar</button>
+  </form>
+  <div id="tvStatus" style="color:var(--muted);margin-bottom:10px"></div>
+  <div id="tvResults" style="display:grid;gap:10px"></div>
 </section>
 
-<section class="panel" id="dashPanel" hidden>
-  <div class="panel-head">
-    <h2>Dashboards</h2>
-    <button class="close" id="dashClose">Fechar</button>
-  </div>
+<!-- PAINEL: Ajustes (Dashboards + AirPlay) -->
+<section class="panel" id="settingsPanel" hidden>
+  <div class="panel-head"><h2>⚙️ Ajustes</h2><button class="close" id="setClose">Fechar</button></div>
+  <div class="sec-title">Painel do modo Dashboard</div>
   <div class="dash-list" id="dashList"></div>
   <form class="dash-form" id="dashForm">
     <input id="dashName" name="name" placeholder="Nome" autocomplete="off">
     <input id="dashUrl" name="url" placeholder="http://servidor:porta/" autocomplete="off">
     <button class="btn primary" type="submit">Adicionar</button>
   </form>
+  <div class="sec-title">Espelhar tela (AirPlay)</div>
+  <p style="color:var(--muted);margin:0 0 10px">Espelhe iPhone/iPad/Mac na TV. Ative e selecione <b>TV LASDPC</b> em Espelhamento de Tela.</p>
+  <button class="btn big" data-action="mode/media">📡 Ativar AirPlay</button>
 </section>
 
-<footer>Navegue com <kbd>←</kbd> <kbd>→</kbd> <kbd>↑</kbd> <kbd>↓</kbd> ou o controle • <kbd>Enter</kbd>/<kbd>A</kbd> seleciona • atualizado a cada 5s</footer>
+<!-- PAINEL: Energia -->
+<section class="panel" id="energyPanel" hidden>
+  <div class="panel-head"><h2>⏻ Energia</h2><button class="close" id="enClose">Fechar</button></div>
+  <div class="row2">
+    <button class="btn big" data-action="power/reboot" data-confirm="Reiniciar a estação?">↻ Reiniciar</button>
+    <button class="btn big danger" data-action="power/shutdown" data-confirm="Desligar a estação?">⏻ Desligar</button>
+  </div>
+</section>
+
+<!-- PAINEL: Ajuda -->
+<section class="panel" id="helpPanel" hidden>
+  <div class="panel-head"><h2>ℹ️ Como usar</h2><button class="close" id="helpClose">Fechar</button></div>
+  <div style="display:grid;gap:13px;font-size:1.02rem;line-height:1.55">
+    <div><b>📊 Dashboard</b> — abre o painel IoT em tela cheia. Troque a URL em <b>Ajustes</b>.</div>
+    <div><b>📺 Vídeo</b> — YouTube e esportes. Toque num canal ao vivo (Cazé etc) ou busque. Usa H.264 até 1080p com decode por hardware.</div>
+    <div><b>🎵 Música</b> — Spotify. No celular, escolha <b>TV LASDPC</b> em Conectar dispositivo.</div>
+    <div><b>🎮 Jogo</b> — emulador (Zelda OoT e outros N64). Movimento nas <b>setas</b>; A=<b>X</b>, B=<b>Z</b>, trava-alvo=<b>Shift</b>, pausa=<b>Enter</b>. Um controle USB funciona automaticamente.</div>
+    <div><b>🖥️ Desktop</b> — ambiente gráfico normal.</div>
+    <hr style="border-color:#1f2b4d;margin:4px 0">
+    <div><b>Sair de qualquer app:</b> tecla <kbd>Super</kbd>+<kbd>Esc</kbd> (Windows+Esc) volta a este menu.</div>
+    <div style="color:var(--muted);font-size:.9rem">Admin remoto: <code>ssh lasdpc@10.0.1.218</code> (LAN) ou via Tailscale. Em travamento, use <b>Energia → Reiniciar</b>.</div>
+  </div>
+</section>
+
+<footer>Navegue com <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> ou controle • <kbd>Enter</kbd> seleciona • <kbd>Super</kbd>+<kbd>Esc</kbd> volta ao menu</footer>
 
 <script>
-const tiles=[...document.querySelectorAll('.tile')];
+const items=[...document.querySelectorAll('.tile, .subtile')];
 let idx=0;
-function focusTile(i){ idx=(i+tiles.length)%tiles.length; tiles.forEach((t,k)=>t.classList.toggle('focus',k===idx)); tiles[idx].focus(); }
+const appsCount=document.querySelectorAll('.apps .tile').length;
+function focusItem(i){ idx=(i+items.length)%items.length; items.forEach((t,k)=>t.classList.toggle('focus',k===idx)); items[idx].focus(); }
+function anyPanelOpen(){ return [...document.querySelectorAll('.panel')].some(p=>!p.hidden); }
 async function act(t){
   const a=t.dataset.action, c=t.dataset.confirm;
   if(c && !confirm(c)) return;
-  if(a==='ui/help'){ openHelp(); return; }
-  if(a==='ui/dashboards'){ openDashboards(); return; }
+  if(a==='ui/help'){ openPanel('helpPanel'); return; }
+  if(a==='ui/settings'){ openSettings(); return; }
+  if(a==='ui/energy'){ openPanel('energyPanel'); return; }
+  if(a==='ui/tv'){ openTv(); return; }
   try{ await fetch('/api/'+a,{method:'POST'}); }catch(e){}
 }
 document.addEventListener('keydown',e=>{
-  if(!helpPanel.hidden && e.key==='Escape'){ closeHelp(); return; }
-  if(!dashPanel.hidden && e.key==='Escape'){ closeDashboards(); return; }
-  if((!dashPanel.hidden||!helpPanel.hidden) && /INPUT|BUTTON/.test(document.activeElement.tagName)) return;
-  if(e.key==='ArrowRight') focusTile(idx+1);
-  else if(e.key==='ArrowLeft') focusTile(idx-1);
-  else if(e.key==='ArrowDown') focusTile(idx+3);
-  else if(e.key==='ArrowUp') focusTile(idx-3);
-  else if(e.key==='Enter'||e.key===' ') act(tiles[idx]);
+  if(anyPanelOpen()){
+    if(e.key==='Escape') closePanels();
+    if(/INPUT|BUTTON/.test(document.activeElement.tagName)) return;
+    return;
+  }
+  // grid de apps: 5 colunas em cima, barra embaixo
+  if(e.key==='ArrowRight') focusItem(idx+1);
+  else if(e.key==='ArrowLeft') focusItem(idx-1);
+  else if(e.key==='ArrowDown') focusItem(idx<appsCount?appsCount:0);
+  else if(e.key==='ArrowUp') focusItem(idx>=appsCount?0:idx);
+  else if(e.key==='Enter'||e.key===' ') act(items[idx]);
 });
-tiles.forEach((t,k)=>{ t.tabIndex=0; t.addEventListener('click',()=>{idx=k;act(t);}); t.addEventListener('mouseenter',()=>focusTile(k)); });
-focusTile(0);
+items.forEach((t,k)=>{ t.tabIndex=0; t.addEventListener('click',()=>{idx=k;act(t);}); t.addEventListener('mouseenter',()=>focusItem(k)); });
+focusItem(0);
 
-// Gamepad: D-pad/sticks navegam, botão A (0) seleciona
+// Gamepad
 let gpPrev={};
 function gpLoop(){
   const gps=navigator.getGamepads?navigator.getGamepads():[];
   for(const gp of gps){ if(!gp) continue;
     const ax=gp.axes||[], bt=gp.buttons||[];
-    const press=(i)=>bt[i]&&bt[i].pressed;
-    const edge=(name,val)=>{const p=gpPrev[name];gpPrev[name]=val;return val&&!p;};
-    if(edge('r', press(15)||ax[0]>0.5)) focusTile(idx+1);
-    if(edge('l', press(14)||ax[0]<-0.5)) focusTile(idx-1);
-    if(edge('d', press(13)||ax[1]>0.5)) focusTile(idx+3);
-    if(edge('u', press(12)||ax[1]<-0.5)) focusTile(idx-3);
-    if(edge('a', press(0))) act(tiles[idx]);
+    const press=i=>bt[i]&&bt[i].pressed;
+    const edge=(n,v)=>{const p=gpPrev[n];gpPrev[n]=v;return v&&!p;};
+    if(edge('r', press(15)||ax[0]>0.5)) focusItem(idx+1);
+    if(edge('l', press(14)||ax[0]<-0.5)) focusItem(idx-1);
+    if(edge('d', press(13)||ax[1]>0.5)) focusItem(idx<appsCount?appsCount:0);
+    if(edge('u', press(12)||ax[1]<-0.5)) focusItem(idx>=appsCount?0:idx);
+    if(edge('a', press(0))) act(items[idx]);
   }
   requestAnimationFrame(gpLoop);
 }
 requestAnimationFrame(gpLoop);
 
-const helpPanel=document.getElementById('helpPanel');
-const helpClose=document.getElementById('helpClose');
-function openHelp(){ helpPanel.hidden=false; helpClose.focus(); }
-function closeHelp(){ helpPanel.hidden=true; focusTile(idx); }
-helpClose.onclick=closeHelp;
+// Painéis
+function postJson(p,d){ return fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); }
+function openPanel(id){ closePanels(); const p=document.getElementById(id); p.hidden=false; const b=p.querySelector('.close,button'); b&&b.focus(); }
+function closePanels(){ document.querySelectorAll('.panel').forEach(p=>p.hidden=true); focusItem(idx); }
+document.getElementById('helpClose').onclick=closePanels;
+document.getElementById('enClose').onclick=closePanels;
+document.getElementById('setClose').onclick=closePanels;
+document.getElementById('tvClose').onclick=closePanels;
+// botões com data-action dentro dos painéis
+document.querySelectorAll('.panel [data-action]').forEach(b=>b.addEventListener('click',()=>act(b)));
 
-const dashPanel=document.getElementById('dashPanel');
-const dashList=document.getElementById('dashList');
-const dashForm=document.getElementById('dashForm');
-const dashClose=document.getElementById('dashClose');
-function postJson(path,data){ return fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)}); }
-function closeDashboards(){ dashPanel.hidden=true; focusTile(idx); }
-async function openDashboards(){ dashPanel.hidden=false; await renderDashboards(); document.getElementById('dashClose').focus(); }
+// Ajustes (Dashboards)
+async function openSettings(){ openPanel('settingsPanel'); await renderDashboards(); }
 async function renderDashboards(){
   const s=await (await fetch('/api/dashboards',{cache:'no-store'})).json();
-  dashList.innerHTML='';
+  const dashList=document.getElementById('dashList'); dashList.innerHTML='';
   for(const d of s.dashboards){
-    const row=document.createElement('div');
-    row.className='dash-row';
+    const row=document.createElement('div'); row.className='dash-row';
     const meta=document.createElement('div');
     meta.innerHTML=`<div class="dash-name"></div><div class="dash-url"></div>${d.url===s.current?'<div class="dash-current">selecionado</div>':''}`;
-    meta.querySelector('.dash-name').textContent=d.name;
-    meta.querySelector('.dash-url').textContent=d.url;
-    const use=document.createElement('button');
-    use.className='btn'; use.textContent='Usar';
+    meta.querySelector('.dash-name').textContent=d.name; meta.querySelector('.dash-url').textContent=d.url;
+    const use=document.createElement('button'); use.className='btn'; use.textContent='Usar';
     use.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await renderDashboards(); refresh(); };
-    const open=document.createElement('button');
-    open.className='btn primary'; open.textContent='Abrir';
+    const open=document.createElement('button'); open.className='btn primary'; open.textContent='Abrir';
     open.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await fetch('/api/mode/dashboard',{method:'POST'}); };
     row.append(meta,use,open); dashList.append(row);
   }
 }
-dashClose.onclick=closeDashboards;
-dashForm.onsubmit=async(e)=>{
+document.getElementById('dashForm').onsubmit=async(e)=>{
   e.preventDefault();
-  const name=document.getElementById('dashName').value.trim();
-  const url=document.getElementById('dashUrl').value.trim();
+  const name=document.getElementById('dashName').value.trim(), url=document.getElementById('dashUrl').value.trim();
   if(!name||!url) return;
-  const r=await postJson('/api/dashboard/save',{name,url});
-  if(r.ok){ dashForm.reset(); await renderDashboards(); }
+  const r=await (await postJson('/api/dashboard/save',{name,url})).json();
+  if(r.ok){ e.target.reset(); await renderDashboards(); }
 };
 
-// Indicadores
+// Vídeo (TV)
+const tvForm=document.getElementById('tvForm'), tvQuery=document.getElementById('tvQuery');
+const tvResults=document.getElementById('tvResults'), tvChannels=document.getElementById('tvChannels'), tvStatus=document.getElementById('tvStatus');
+async function openTv(){
+  openPanel('tvPanel'); tvResults.innerHTML=''; tvStatus.textContent='';
+  try{
+    const s=await (await fetch('/api/tv/channels',{cache:'no-store'})).json();
+    tvChannels.innerHTML='';
+    for(const ch of (s.channels||[])){
+      const b=document.createElement('button'); b.className='btn'; b.textContent='▶ '+ch.name;
+      b.onclick=()=>tvPlay(ch.url?{url:ch.url}:{query:ch.query}, ch.name); tvChannels.append(b);
+    }
+  }catch(e){}
+  setTimeout(()=>tvQuery.focus(),50);
+}
+async function tvPlay(payload,label){
+  tvStatus.textContent='Abrindo '+(label||'')+'… (alguns segundos)';
+  try{ const r=await (await postJson('/api/tv/play',payload)).json();
+    tvStatus.textContent=r.ok?'Tocando na TV ✓':'Não encontrado: '+(r.error||'');
+    if(r.ok) setTimeout(closePanels,900);
+  }catch(e){ tvStatus.textContent='Erro de conexão'; }
+}
+async function tvDoSearch(q){
+  tvStatus.textContent='Buscando…'; tvResults.innerHTML='';
+  try{ const r=await (await postJson('/api/tv/search',{query:q})).json();
+    if(!r.ok){ tvStatus.textContent='Erro: '+(r.error||''); return; }
+    tvStatus.textContent=(r.results.length||0)+' resultados — toque para abrir';
+    for(const v of r.results){
+      const row=document.createElement('div'); row.className='dash-row';
+      row.style.gridTemplateColumns='120px 1fr auto'; row.style.cursor='pointer';
+      row.innerHTML=`<img alt="" style="width:120px;border-radius:8px" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg">
+        <div><div class="dash-name"></div><div class="dash-url"></div></div>
+        <div>${v.live?'<span style="color:var(--bad);font-weight:700">● LIVE</span>':''}</div>`;
+      row.querySelector('.dash-name').textContent=v.title; row.querySelector('.dash-url').textContent=v.channel;
+      row.onclick=()=>tvPlay({url:'https://www.youtube.com/watch?v='+v.id}, v.title);
+      tvResults.append(row);
+    }
+  }catch(e){ tvStatus.textContent='Erro de conexão'; }
+}
+tvForm.onsubmit=e=>{ e.preventDefault(); const q=tvQuery.value.trim(); if(q) tvDoSearch(q); };
+
+// Status
 async function refresh(){
   try{
     const s=await (await fetch('/api/status',{cache:'no-store'})).json();
@@ -191,9 +276,8 @@ async function refresh(){
     document.getElementById('ip').textContent=s.ip||'?';
     const net=document.getElementById('net'), nd=document.getElementById('netdot');
     net.textContent=s.net?'online':'offline'; nd.style.background=s.net?'var(--ok)':'var(--bad)';
-    const up=(s.containers||[]).filter(c=>/Up|healthy/i.test(c.status)).length;
-    const tot=(s.containers||[]).length;
-    document.getElementById('cont').textContent=tot? (up+'/'+tot):'0';
+    const up=(s.containers||[]).filter(c=>/Up|healthy/i.test(c.status)).length, tot=(s.containers||[]).length;
+    document.getElementById('cont').textContent=tot?(up+'/'+tot):'0';
   }catch(e){}
 }
 refresh(); setInterval(refresh,5000);

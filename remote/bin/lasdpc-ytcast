@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-ytcast — sobe o receptor de cast do YouTube (Lounge/DIAL) que toca
+# os videos no mpv com decode por hardware (ver remote/ytcast/index.js).
+# Deve rodar DENTRO da sessao Wayland (precisa de WAYLAND_DISPLAY/XDG_RUNTIME_DIR
+# para lancar o mpv) — o lasdpc-session o inicia no modo ytcast.
+# ============================================================
+set -u
+APP_DIR="/opt/lasdpc-pi-station/ytcast"
+[ -f "$APP_DIR/index.js" ] || { logger -t lasdpc-ytcast "index.js ausente em $APP_DIR (rode make/scripts/170-ytcast.sh)"; sleep 5; exit 1; }
+command -v node >/dev/null 2>&1 || { logger -t lasdpc-ytcast "node nao instalado"; sleep 5; exit 1; }
+exec node "$APP_DIR/index.js"

@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-loading [mensagem] — overlay transitorio fullscreen. Usa mpv com
+# --ontop porque ele fica acima do Chromium kiosk fullscreen de forma confiavel.
+# O lasdpc-session encerra este overlay quando o app de destino ja foi lancado.
+# ============================================================
+set -u
+MSG="${1:-Carregando}"
+CONF="${HOME:-/home/lasdpc}/.config/lasdpc"
+PNG="$CONF/loading.png"
+mkdir -p "$CONF"
+
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
+
+python3 - "$PNG" "$MSG" <<'PY' >/dev/null 2>&1 || true
+import sys
+from PIL import Image, ImageDraw, ImageFont
+
+out, msg = sys.argv[1], sys.argv[2]
+W, H = 1920, 1080
+img = Image.new("RGB", (W, H), "#080b0f")
+draw = ImageDraw.Draw(img)
+
+def font(size, bold=False):
+    paths = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+    ]
+    for p in paths:
+        try:
+            return ImageFont.truetype(p, size)
+        except Exception:
+            pass
+    return ImageFont.load_default()
+
+title_font = font(54, True)
+sub_font = font(28)
+cx, cy = W // 2, H // 2
+
+draw.ellipse((cx - 54, cy - 154, cx + 54, cy - 46), outline="#f4c542", width=10)
+draw.arc((cx - 54, cy - 154, cx + 54, cy - 46), 300, 70, fill="#ffffff", width=10)
+
+for text, fnt, y, color in [
+    (msg, title_font, cy + 5, "#f6f7f8"),
+    ("Preparando a tela...", sub_font, cy + 82, "#b7c0ca"),
+]:
+    box = draw.textbbox((0, 0), text, font=fnt)
+    draw.text((cx - (box[2] - box[0]) / 2, y), text, font=fnt, fill=color)
+
+img.save(out)
+PY
+
+if command -v mpv >/dev/null 2>&1 && [ -s "$PNG" ]; then
+  exec mpv --no-terminal --really-quiet --force-window=yes --fullscreen --ontop \
+    --no-border --keep-open=yes --loop-file=inf --image-display-duration=inf \
+    --title="LASDPC Loading" "$PNG"
+fi
+
+# Fallback Chromium se mpv/Pillow falhar.
+HTML="/opt/lasdpc-pi-station/launcher/loading.html"
+PROFILE="$CONF/chromium-loading"
+mkdir -p "$PROFILE"
+rm -f "$PROFILE/SingletonLock" "$PROFILE/SingletonCookie" "$PROFILE/SingletonSocket" 2>/dev/null || true
+CHROME=""
+for c in chromium chromium-browser; do
+  command -v "$c" >/dev/null 2>&1 && { CHROME="$c"; break; }
+done
+[ -n "$CHROME" ] || exit 0
+url="file://${HTML}#$(printf '%s' "$MSG" | sed -e 's/ /%20/g' -e 's/#/%23/g' -e 's/?/%3F/g')"
+exec "$CHROME" \
+  --ozone-platform=wayland \
+  --user-data-dir="$PROFILE" \
+  --app="$url" \
+  --start-fullscreen \
+  --class=LASDPCLoading \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --disable-translate \
+  --disable-features=Translate,TranslateUI \
+  --lang=pt-BR \
+  --accept-lang=pt-BR,pt,en-US,en \
+  --no-first-run \
+  --fast --fast-start \
+  --no-default-browser-check \
+  --check-for-update-interval=31536000 \
+  --overscroll-history-navigation=0 \
+  --autoplay-policy=no-user-gesture-required \
+  --password-store=basic

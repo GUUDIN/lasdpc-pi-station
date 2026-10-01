@@ -1,0 +1,11 @@
+{
+  "name": "lasdpc-ytcast",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Receptor de cast do YouTube (protocolo Lounge/DIAL) que toca via mpv com decode por hardware no Pi 4.",
+  "main": "index.js",
+  "dependencies": {
+    "yt-cast-receiver": "^2.1.0"
+  }
+}

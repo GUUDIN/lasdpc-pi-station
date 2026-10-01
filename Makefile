@@ -10,8 +10,9 @@ S     := ./scripts
 .PHONY: help preflight ssh-test inspect backup base kiosk docker iot kodi \
         retropie-check retropie launcher hardening healthcheck deploy status \
         logs update restore uninstall media-gaming-preflight media-install media-check youtube-check \
-        gaming-install gaming-check \
-        iot-up iot-down iot-status iot-logs iot-backup iot-update
+        gaming-install gaming-check ytcast \
+        iot-up iot-down iot-status iot-logs iot-backup iot-update \
+        kiosk-config entertainment
 
 help: ## Mostra esta ajuda
 	@echo "LASDPC Pi Station — alvos disponíveis:"
@@ -30,6 +31,8 @@ base: ## Sistema-base (hostname, locale, timezone, pacotes, logrotate)
 	@$(S)/10-base-system.sh
 kiosk: ## Dashboard Chromium em modo kiosk
 	@$(S)/20-desktop-kiosk.sh
+kiosk-config: ## Reaplicar labwc (rc.xml, menu.xml) + lasdpc-session e recarregar ao vivo
+	@$(S)/21-kiosk-config.sh
 docker: ## Docker Engine + Compose (repositório oficial)
 	@$(S)/30-docker.sh
 iot: ## Stack IoT (Mosquitto/Node-RED/Grafana/InfluxDB/homepage)
@@ -58,6 +61,10 @@ gaming-install: ## Etapa 4: instala perfil gaming (RetroArch+cores+ES-DE) — de
 	@$(S)/120-gaming-install.sh
 gaming-check: ## Etapa 4: checa perfil gaming (TCs automatizados)
 	@$(S)/121-gaming-check.sh
+entertainment: ## Video (mpv+yt-dlp), Musica (Spotify), Jogo (RetroArch) — tudo de uma vez
+	@$(S)/160-entertainment.sh
+ytcast: ## YouTube Cast pelo celular (receiver DIAL/Lounge -> mpv HW)
+	@$(S)/170-ytcast.sh
 
 deploy: preflight ssh-test inspect backup base docker iot kiosk kodi launcher ## Instala tudo EXCETO RetroPie
 	@echo ">> deploy concluído. RetroPie é separado: rode 'make retropie-check' e depois 'make retropie'."

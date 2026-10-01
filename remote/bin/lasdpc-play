@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-play <url> — define a URL a tocar e entra no modo tv.
+# Chamado pelo launcher (atalhos/busca) ou por SSH. So mexe em estado;
+# o lasdpc-session (na sessao grafica) lanca o mpv.
+# ============================================================
+set -u
+URL="${1:-}"
+[ -n "$URL" ] || { echo "uso: lasdpc-play <url>"; exit 1; }
+CONF="${HOME:-/home/lasdpc}/.config/lasdpc"
+mkdir -p "$CONF"
+printf '%s\n' "$URL" > "$CONF/play_url"
+# lasdpc-mode tv grava o modo E encerra o app anterior (menu/Chromium), liberando
+# o lasdpc-session (que estava preso no app atual) para lancar o mpv.
+if command -v lasdpc-mode >/dev/null 2>&1; then
+  lasdpc-mode tv >/dev/null 2>&1
+else
+  echo tv > "$CONF/mode"
+fi
+logger -t lasdpc-play "tv: $URL" 2>/dev/null || true
+echo "tocando: $URL"

@@ -1,0 +1,8 @@
+[Unit]
+Description=Atualiza yt-dlp (o YouTube muda e quebra versoes antigas)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/yt-dlp -U

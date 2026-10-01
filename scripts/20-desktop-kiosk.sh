@@ -45,6 +45,14 @@ pi_ssh "set -e
   echo '   autostart instalado'
 "
 
+log ">> Menu de contexto do labwc (botão direito no desktop)"
+pi_rsync -a "$PROJECT_DIR/remote/kiosk/labwc-menu.xml" "$PI_USER@$PI_HOST:/tmp/labwc-menu.xml"
+pi_ssh "mv /tmp/labwc-menu.xml ~/.config/labwc/menu.xml && echo '   menu.xml instalado'"
+
+log ">> Config global do labwc (rc.xml — atalhos, regras de janela)"
+pi_rsync -a "$PROJECT_DIR/remote/kiosk/labwc-rc.xml" "$PI_USER@$PI_HOST:/tmp/labwc-rc.xml"
+pi_ssh "sudo cp /tmp/labwc-rc.xml /etc/xdg/labwc/rc.xml && echo '   rc.xml instalado em /etc/xdg/labwc/rc.xml'"
+
 log ">> Desativando screen blanking (anti-suspensão da tela)"
 pi_ssh "sudo raspi-config nonint do_blanking 1 2>/dev/null && echo '   blanking desativado' || echo '   (do_blanking indisponível; o kiosk usa systemd-inhibit)'"
 

@@ -7,10 +7,20 @@
 # ============================================================
 set -u
 URL="${1:-http://localhost:8090}"
-PROFILE="${HOME}/.config/lasdpc/chromium-kiosk"
+# Profile pode ser sobrescrito por env (ex.: modo ytcast usa "chromium-ytcast"
+# para nao concorrer pelo mesmo SingletonLock do menu/dashboard ao trocar de
+# modo, o que estava jogando a sessao em backoff -> menu).
+PROFILE="${HOME}/.config/lasdpc/${LASDPC_KIOSK_PROFILE:-chromium-kiosk}"
 FALLBACK="file://${HOME}/.config/lasdpc/fallback.html"
 ESCAPE_EXTENSION="/opt/lasdpc-pi-station/kiosk/escape-extension"
 mkdir -p "$PROFILE"
+
+# Remove locks orfaos de uma instancia anterior encerrada abruptamente (SIGTERM
+# do lasdpc-mode ao trocar de modo). O Chromium recusa subir num profile com
+# SingletonLock vivo e sai na hora; como o lasdpc-session garante UMA instancia
+# kiosk por vez, limpar aqui evita o sintoma "entra, volta ao menu, so funciona
+# na 2a vez" (a 1a tentativa morria no lock e caia no backoff).
+rm -f "$PROFILE/SingletonLock" "$PROFILE/SingletonCookie" "$PROFILE/SingletonSocket" 2>/dev/null || true
 
 # Detecta o binário do Chromium
 CHROME=""
@@ -51,11 +61,15 @@ CHROME_ARGS=(
 
 logger -t lasdpc-kiosk "abrindo $target"
 
-# Impede suspensão/blank de tela quando a sessão permite. Em recuperações por SSH,
-# systemd-inhibit pode negar polkit; nesse caso abre o Chromium direto.
+# Impede suspensão/blank de tela quando a sessão permite, via systemd-inhibit.
+# IMPORTANTE: usamos exec, então o lasdpc-kiosk É SUBSTITUIDO pelo Chromium e
+# sai com o codigo de saida dele. Quem decide relançar (ou trocar de modo) é o
+# lasdpc-session. A versao anterior fazia `systemd-inhibit ... && exit 0` seguido
+# de um exec de fallback: quando o lasdpc-mode matava o Chromium (SIGTERM, exit
+# 143) ao trocar de modo, o `&&` nao disparava e o fallback RELANÇAVA o mesmo
+# Chromium (o menu) — causando o "volta pro menu e so depois abre".
 if command -v systemd-inhibit >/dev/null 2>&1; then
-  systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-kiosk --mode=block "$CHROME" "${CHROME_ARGS[@]}" && exit 0
-  logger -t lasdpc-kiosk "systemd-inhibit falhou; abrindo Chromium sem inhibit"
+  exec systemd-inhibit --what=idle:sleep:handle-lid-switch --why=lasdpc-kiosk --mode=block "$CHROME" "${CHROME_ARGS[@]}"
 fi
 
 exec "$CHROME" "${CHROME_ARGS[@]}"
