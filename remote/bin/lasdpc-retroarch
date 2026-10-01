@@ -19,6 +19,10 @@ if [ ! -f "$COREOPTS" ] || ! grep -q '^parallel-n64-gfxplugin' "$COREOPTS" 2>/de
   } >> "$COREOPTS"
 fi
 
+# Regenera a playlist N64 a cada abertura: ROM copiada para roms/n64 aparece sozinha.
+PL=/opt/lasdpc-pi-station/launcher/make_n64_playlist.py
+[ -f "$PL" ] && python3 "$PL" >/dev/null 2>&1 || true
+
 logger -t lasdpc-retroarch "abrindo RetroArch (vulkan/ozone)"
 # sem --fullscreen: o labwc poe a janela em fullscreen (ver labwc-rc.xml)
 exec retroarch
