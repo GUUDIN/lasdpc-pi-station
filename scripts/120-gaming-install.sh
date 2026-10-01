@@ -17,7 +17,7 @@ pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-gaming-install.sh" "$PI_USER@$PI_HOS
 log ">> Lançando instalação DESTACADA (systemd-run)"
 pi_ssh "sudo mkdir -p /var/log/lasdpc
   sudo systemctl reset-failed lasdpc-gaming 2>/dev/null || true
-  sudo systemd-run --unit=lasdpc-gaming --collect /bin/bash -c 'mkdir -p /var/log/lasdpc; exec bash /home/$PI_USER/lasdpc-gaming-install.sh >> /var/log/lasdpc/gaming.log 2>&1'
+  sudo systemd-run --unit=lasdpc-gaming --collect /bin/bash -c 'mkdir -p /var/log/lasdpc; LASDPC_USER=$PI_USER exec bash /home/$PI_USER/lasdpc-gaming-install.sh >> /var/log/lasdpc/gaming.log 2>&1'
   sleep 3
   echo \"   gaming ativo? \$(systemctl is-active lasdpc-gaming)\"
   echo \"   status: \$(cat /var/log/lasdpc/gaming.status 2>/dev/null)\""

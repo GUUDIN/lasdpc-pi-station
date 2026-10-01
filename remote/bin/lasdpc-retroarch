@@ -20,4 +20,5 @@ if [ ! -f "$COREOPTS" ] || ! grep -q '^parallel-n64-gfxplugin' "$COREOPTS" 2>/de
 fi
 
 logger -t lasdpc-retroarch "abrindo RetroArch (vulkan/ozone)"
-exec retroarch --fullscreen
+# sem --fullscreen: o labwc poe a janela em fullscreen (ver labwc-rc.xml)
+exec retroarch

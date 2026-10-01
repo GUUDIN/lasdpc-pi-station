@@ -16,6 +16,7 @@ pi_rsync -a "$PROJECT_DIR/remote/launcher/" "$PI_USER@$PI_HOST:$LAUNCHER/"
 
 log ">> Instalando serviço systemd lasdpc-launcher"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/lasdpc-launcher.service" "$PI_USER@$PI_HOST:/tmp/lasdpc-launcher.service"
+pi_ssh "sed -i 's/^User=.*/User=$PI_USER/' /tmp/lasdpc-launcher.service"
 pi_ssh "set -e
   sudo mv /tmp/lasdpc-launcher.service /etc/systemd/system/lasdpc-launcher.service
   sudo systemctl daemon-reload

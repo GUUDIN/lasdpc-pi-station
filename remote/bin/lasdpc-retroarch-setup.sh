@@ -24,8 +24,9 @@ setcfg(){ local k="$1" v="$2"
 # --- aparencia / comportamento ---
 setcfg menu_driver ozone
 setcfg video_driver vulkan
-setcfg video_fullscreen true
-setcfg video_windowed_fullscreen true
+# fullscreen fica a cargo do labwc (windowRule com.libretro.RetroArch)
+setcfg video_fullscreen false
+setcfg video_windowed_fullscreen false
 setcfg video_smooth true
 setcfg menu_mouse_enable true
 setcfg menu_pause_libretro false

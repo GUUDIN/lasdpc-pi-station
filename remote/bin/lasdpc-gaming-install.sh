@@ -26,7 +26,8 @@ ESDE_URL="https://gitlab.com/es-de/emulationstation-de/-/package_files/288156935
 ESDE_VERSION="3.4.1"
 ARCH_TRIPLET="$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo aarch64-linux-gnu)"
 CORE_DIR="/usr/lib/${ARCH_TRIPLET}/libretro"
-USER_HOME="$(getent passwd lasdpc | cut -d: -f6)"
+LASDPC_USER="${LASDPC_USER:-lasdpc}"
+USER_HOME="$(getent passwd "$LASDPC_USER" | cut -d: -f6)"
 
 echo ">> espaço livre: $(df -h / | tail -1 | awk '{print $4}')"
 
@@ -69,7 +70,7 @@ Coloque aqui SOMENTE ROMs/jogos LEGAIS (backups próprios ou homebrew livre).
 Estrutura por sistema: n64/ nes/ snes/ gb/ gbc/ gba/ megadrive/ mastersystem/ psx/
 Transferência: rsync/scp/SFTP via Tailscale. Não versionar ROMs no Git.
 TXT
-chown -R lasdpc:lasdpc "$SRV/roms" "$SRV/saves" "$SRV/config"
+chown -R "$LASDPC_USER:$LASDPC_USER" "$SRV/roms" "$SRV/saves" "$SRV/config"
 
 echo ">> Pré-seed do ES-DE (ROMs em $SRV/roms)"
 ESHOME="$USER_HOME/ES-DE/settings"
@@ -83,7 +84,7 @@ if [ ! -f "$ESHOME/es_settings.xml" ]; then
 <bool name="StartupOnFirstSystem" value="false" />
 XML
 fi
-chown -R lasdpc:lasdpc "$USER_HOME/ES-DE"
+chown -R "$LASDPC_USER:$LASDPC_USER" "$USER_HOME/ES-DE"
 
 echo "DONE $(date -Iseconds)" > "$STATUS"
 echo "GAMING-INSTALL-COMPLETE"

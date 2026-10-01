@@ -125,3 +125,23 @@ O microSD original falhou e foi substituido. Se reaparecerem erros como `bad blo
 2. Copie `/var/log/syslog`, `journalctl -k` e dados importantes.
 3. Suspeite do armazenamento ou fonte.
 4. Prepare novo cartao/SSD e restaure backup.
+
+## Pi 4 com Raspberry Pi OS 12 (Bookworm) — jogos/N64
+
+Validado em 2026-10-01 numa Pi 4 8 GB com Bookworm + labwc 0.8.1.
+
+- **RetroArch do apt (1.14) nao tem Vulkan** (`retroarch --features` → `Vulkan: no`),
+  e o N64 (parallel_n64 + parallel-rdp) exige Vulkan. Solucao: compilar o RetroArch
+  1.20.0 com `--enable-vulkan --enable-wayland` e instalar em `/usr/local`
+  (precisa de `libvulkan-dev libx11-xcb-dev libwayland-dev wayland-protocols ...`).
+- **Fullscreen do RetroArch** e feito pelo labwc (`windowRule identifier="com.libretro.RetroArch"`
+  + `video_fullscreen=false`). A regra antiga `identifier="retroarch"` nunca casava com o
+  app_id Wayland real (`com.libretro.RetroArch`).
+- **Crash ao entrar em fullscreen** (`Failed to create swapchain (VkResult -1)` + segfault):
+  no fullscreen o wlroots oferece direct scanout e o Mesa realoca a swapchain como buffer
+  de scanout (CMA contigua). Com a CMA fragmentada (ex.: app Electron/Chromium renderizando
+  em `/dev/dri/card1`) a alocacao falha. Correcao: em `~/.config/labwc/environment`
+  adicionar `WLR_SCENE_DISABLE_DIRECT_SCANOUT=1` e reiniciar a sessao.
+  Confirmado: em labwc aninhado (sem scanout) o N64 roda fullscreen a 60 FPS.
+- ES-DE 3.4.1: URL de download retorna 404 (irrelevante — ES-DE nao roda no Pi 4).
+- Scripts aceitam usuario diferente de `lasdpc` (`PI_USER` no `.env`).

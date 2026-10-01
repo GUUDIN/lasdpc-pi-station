@@ -159,8 +159,10 @@
     <windowRule identifier="ares">
       <action name="ToggleFullscreen" />
     </windowRule>
-    <!-- RetroArch: garante fullscreen ao abrir -->
-    <windowRule identifier="retroarch">
+    <!-- RetroArch: abre em janela (video_fullscreen=false) e o labwc poe em
+         fullscreen. O fullscreen nativo do RetroArch nao aparece no labwc 0.8
+         (Bookworm). app_id Wayland do RetroArch = com.libretro.RetroArch. -->
+    <windowRule identifier="com.libretro.RetroArch" serverDecoration="no">
       <action name="ToggleFullscreen" />
     </windowRule>
   </windowRules>
