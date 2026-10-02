@@ -58,10 +58,29 @@ abre em ~3 s e roda a abertura a 45-60 FPS.
 `game_profiles.py` roda a cada abertura do RetroArch e aplica:
 
 - `n64/core.opt` — base do Mupen64Plus-Next para o Pi 4: **resolucao nativa 320x240 +
-  renderizador em thread**. Benchmark sem limitador (60 = velocidade real), Zelda OoT:
-  640x480 padrao 45 fps → 320x240 68 fps → +ThreadedRenderer **79-82 fps**. O gargalo e
-  o fill rate da V3D; CopyDepth Off, HybridFilter, LOD, CountPerOp e resampler de audio
-  ficaram dentro do ruido. Visualmente quase igual na TV.
+  renderizador em thread**. Benchmark sem limitador (60 = velocidade real), Zelda OoT,
+  13 areas alcancadas por warp (`tools/n64-bench`):
+
+  | Area | Padrao (640x480) | Afinado |
+  |---|---|---|
+  | Kakariko (pior) | 46.6 | 90.4 |
+  | Desert Colossus | 48.6 | 94.0 |
+  | Death Mountain Crater | 48.2 | 94.9 |
+  | Lake Hylia | 50.2 | 96.6 |
+  | Zora's Domain | 50.6 | 99.0 |
+  | Hyrule Field | 50.3 | 100.0 |
+  | Lon Lon Ranch | 51.1 | 100.1 |
+  | Hyrule Castle | 52.6 | 99.9 |
+  | Gerudo Valley | 52.7 | 101.8 |
+  | Death Mountain Trail | 52.7 | 102.0 |
+  | Market | 53.5 | 101.8 |
+  | Lost Woods | 65.6 | 116.4 |
+  | Temple of Time | 67.8 | 116.4 |
+
+  O gargalo e o fill rate da V3D (640x480 → 320x240 sozinho leva Kakariko de 47 a 75) e a
+  thread principal do emulador (o renderizador em thread leva de 75 a 94). Copia de
+  profundidade, framebuffer, CountPerOp, memoria extra e resampler de audio nao mudaram
+  o resultado alem do ruido. Visualmente quase igual na TV.
 - `n64/<jogo>.opt` — ajustes do titulo, casando pelo nome interno da ROM (`# match:`),
   em qualquer ordem de bytes (.z64/.v64/.n64). O RetroArch usa o .opt do jogo *no lugar*
   do .opt do core, entao o arquivo gerado leva base + ajustes.

@@ -1,0 +1,9 @@
+states*/
+shots/
+*.log
+*.cfg
+*.opt
+*.png
+*.fifo
+*.data
+area.txt
