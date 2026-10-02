@@ -1,0 +1,8 @@
+# The Legend of Zelda: Ocarina of Time (NTSC/PAL, todas as revisoes).
+# match: THE LEGEND OF ZELDA
+# Emulacao de framebuffer e obrigatoria: o fundo do menu de pausa e a pedra do
+# Lens/oclusao do sol leem a imagem renderizada de volta para a RAM do N64.
+# Validado: menu de pausa ok; 79 fps sem limite na Floresta Kokiri.
+mupen64plus-EnableFBEmulation = "True"
+mupen64plus-EnableCopyColorToRDRAM = "Async"
+mupen64plus-EnableCopyDepthToRDRAM = "Software"

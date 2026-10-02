@@ -1,0 +1,14 @@
+# Mupen64Plus-Next (GLideN64 GLES3) — base afinada para o Pi 4 (V3D @ 500 MHz).
+# Medido em 2026-10-01 com Zelda OoT, sem limitador (60 = velocidade real):
+#   640x480 (padrao)            -> 45 fps  (gargalo: fill rate da GPU)
+#   320x240 (resolucao nativa)  -> 68 fps
+#   320x240 + ThreadedRenderer  -> 79-82 fps   <- escolhido
+# CopyDepth Off, HybridFilter, LOD, CountPerOp, resampler de audio: ganho <= ruido.
+mupen64plus-rdp-plugin = "gliden64"
+mupen64plus-rsp-plugin = "hle"
+mupen64plus-cpucore = "dynamic_recompiler"
+mupen64plus-43screensize = "320x240"
+mupen64plus-EnableNativeResFactor = "0"
+mupen64plus-ThreadedRenderer = "True"
+mupen64plus-MultiSampling = "0"
+mupen64plus-FXAA = "0"

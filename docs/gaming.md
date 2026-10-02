@@ -53,6 +53,32 @@ O menu central e a playlist N64 passam a preferi-lo automaticamente (o RetroArch
 sozinho para o driver `glcore` enquanto o jogo roda). Validado em 2026-10-01: OoT
 abre em ~3 s e roda a abertura a 45-60 FPS.
 
+### Perfis por jogo (`remote/launcher/profiles/`)
+
+`game_profiles.py` roda a cada abertura do RetroArch e aplica:
+
+- `n64/core.opt` — base do Mupen64Plus-Next para o Pi 4: **resolucao nativa 320x240 +
+  renderizador em thread**. Benchmark sem limitador (60 = velocidade real), Zelda OoT:
+  640x480 padrao 45 fps → 320x240 68 fps → +ThreadedRenderer **79-82 fps**. O gargalo e
+  o fill rate da V3D; CopyDepth Off, HybridFilter, LOD, CountPerOp e resampler de audio
+  ficaram dentro do ruido. Visualmente quase igual na TV.
+- `n64/<jogo>.opt` — ajustes do titulo, casando pelo nome interno da ROM (`# match:`),
+  em qualquer ordem de bytes (.z64/.v64/.n64). O RetroArch usa o .opt do jogo *no lugar*
+  do .opt do core, entao o arquivo gerado leva base + ajustes.
+- `n64/keyboard.cfg` — override de teclado do core: neste core o A do N64 e o B do
+  RetroPad, entao o mapeamento global deixava X = C-baixo e Z = A.
+
+**Zelda OoT** (`ocarina-of-time.opt`): emulacao de framebuffer obrigatoria (fundo do menu
+de pausa, oclusao do sol). Validado jogando por script (teclado virtual uinput): criar
+save, cenas iniciais, sair da casa, Floresta Kokiri e menu de pausa, a ~60 fps. Quedas do
+contador para ~45 so nas transicoes de area (o jogo para de gerar quadros, nao e lentidao).
+O cache de shaders do GLideN64 (desligado em builds GLES) foi testado e nao mudou nada.
+
+Teclado (N64): setas = analogico, X = A, Z = B, Shift = Z (trava-alvo), V = R (escudo),
+I/J/K/L = botoes C, Enter = Start, F = L, F1 = menu do RetroArch. Os atalhos padrao do
+RetroArch em `k`/`l`/`f`/`i` (avancar quadro, avanco rapido, fullscreen, netplay) foram
+desligados: o `k` congelava o jogo ao apertar C-baixo.
+
 Copiar ROM legal:
 
 ```sh

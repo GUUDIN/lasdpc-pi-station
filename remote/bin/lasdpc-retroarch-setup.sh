@@ -48,13 +48,20 @@ setcfg input_player1_l_y_plus  down
 setcfg input_player1_a x          # A: pular/acao
 setcfg input_player1_b z          # B: espada/cancelar
 setcfg input_player1_start enter  # Start
-setcfg input_player1_l2 lshift    # Z trigger (trava alvo)
+setcfg input_player1_l2 shift     # Z trigger (trava alvo); "lshift" nao existe no RetroArch
 setcfg input_player1_l f
 setcfg input_player1_r v
 setcfg input_player1_r_y_minus i  # C-buttons
 setcfg input_player1_r_y_plus  k
 setcfg input_player1_r_x_minus j
 setcfg input_player1_r_x_plus  l
+# atalhos padrao do RetroArch que colidem com as teclas do jogo: k = avancar quadro
+# (congelava o jogo no C-baixo), l = segurar avanco rapido, f = fullscreen (o labwc
+# cuida disso), i = netplay
+setcfg input_frame_advance nul
+setcfg input_hold_fast_forward nul
+setcfg input_toggle_fullscreen nul
+setcfg input_netplay_game_watch nul
 # anti-saida acidental: sai so via Super+Esc (sistema) ou menu (F1)
 setcfg input_exit_emulator nul
 setcfg input_menu_toggle f1
@@ -76,5 +83,6 @@ run_py(){ local f="$1" d
   echo "   (aviso: $f nao encontrado — pulei)"; }
 run_py make_n64_playlist.py
 run_py fetch_thumbs.py
+run_py game_profiles.py
 
 echo "RetroArch configurado (Vulkan/Ozone, controle N64, playlist+thumbs)."

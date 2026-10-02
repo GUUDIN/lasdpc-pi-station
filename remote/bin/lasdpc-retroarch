@@ -36,6 +36,9 @@ games_mode(){ [ "$(tr -d '[:space:]' < "$CONF/mode" 2>/dev/null)" = "games" ]; }
 status "Atualizando a lista de jogos..."
 PL=/opt/lasdpc-pi-station/launcher/make_n64_playlist.py
 [ -f "$PL" ] && python3 "$PL" >/dev/null 2>&1 || true
+# Perfis de desempenho/controle por jogo (launcher/profiles); ROM nova ganha o seu.
+GP=/opt/lasdpc-pi-station/launcher/game_profiles.py
+[ -f "$GP" ] && python3 "$GP" 2>&1 | logger -t lasdpc-retroarch || true
 
 ARGS=(--verbose)
 if [ -n "$CORE" ] && [ -n "$ROM" ]; then
