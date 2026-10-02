@@ -145,3 +145,9 @@ Validado em 2026-10-01 numa Pi 4 8 GB com Bookworm + labwc 0.8.1.
   Confirmado: em labwc aninhado (sem scanout) o N64 roda fullscreen a 60 FPS.
 - ES-DE 3.4.1: URL de download retorna 404 (irrelevante — ES-DE nao roda no Pi 4).
 - Scripts aceitam usuario diferente de `lasdpc` (`PI_USER` no `.env`).
+- `remote/kiosk/labwc-rc.xml` e do Trixie: tema `PiXtrix`, fonte `Nunito Sans` e campo
+  `icon` do windowSwitcher nao existem no Bookworm/labwc 0.8.1. Nesta Pi o rc.xml instalado
+  usa `PiXflat`/`PibotoLt` e so o campo `title` (re-aplicar apos `make kiosk-config`).
+- Receptor Microsoft 2.4GHz v8.0 (045e:0745): scroll hi-res quebrado. Quirk em
+  `/etc/libinput/local-overrides.quirks` com `AttrEventCodeDisable=REL_WHEEL_HI_RES;REL_HWHEEL_HI_RES;`
+  (libinput 1.22 nao aceita a sintaxe nova `AttrEventCode=-...`).
