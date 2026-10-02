@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="nav-kbd">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -10,6 +10,11 @@
   html,body{height:100%;margin:0}
   body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:radial-gradient(1200px 600px at 50% -10%,#142046,#0b1020);
        color:var(--fg);display:flex;flex-direction:column;min-height:100vh}
+  button{font:inherit;color:inherit;appearance:none;-webkit-appearance:none}
+  :focus{outline:none}
+  /* Anel de foco so na navegacao por teclado/controle; com mouse vale o :hover. */
+  html.nav-kbd :is(button,input):focus{outline:3px solid var(--accent);outline-offset:3px}
+
   header{display:flex;justify-content:space-between;align-items:center;padding:22px 44px}
   header h1{font-size:1.5rem;margin:0;letter-spacing:.5px;color:#cdd6f4}
   .badges{display:flex;gap:18px;font-size:1rem;color:var(--muted);flex-wrap:wrap}
@@ -17,44 +22,74 @@
   .dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:middle;margin-right:6px}
 
   main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:30px;padding:10px 44px 30px}
-  .apps{display:grid;grid-template-columns:repeat(5,1fr);gap:22px}
+  .apps{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:22px}
   .tile{background:linear-gradient(160deg,#161f3d,#121a33);border:2px solid #243156;border-radius:22px;
-        padding:42px 18px;text-align:center;cursor:pointer;transition:transform .1s,border-color .1s,box-shadow .1s;outline:none}
-  .tile:hover{transform:translateY(-4px)}
-  .tile.focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.3),0 18px 40px rgba(0,0,0,.4);transform:translateY(-4px)}
+        padding:42px 18px;text-align:center;cursor:pointer;transition:transform .1s,border-color .1s,box-shadow .1s}
+  .tile:hover{transform:translateY(-4px);border-color:#34508f}
+  html.nav-kbd .tile:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.3),0 18px 40px rgba(0,0,0,.4);transform:translateY(-4px)}
   .tile .ico{font-size:3.6rem;line-height:1}
-  .tile .lbl{font-size:1.45rem;margin-top:16px;font-weight:650}
-  .tile .sub{font-size:.92rem;color:var(--muted);margin-top:6px}
+  .tile .lbl{display:block;font-size:1.45rem;margin-top:16px;font-weight:650}
+  .tile .sub{display:block;font-size:.92rem;color:var(--muted);margin-top:6px}
 
-  .sysbar{display:flex;justify-content:center;gap:14px}
+  .sysbar{display:flex;justify-content:center;gap:14px;flex-wrap:wrap}
   .subtile{display:flex;align-items:center;gap:10px;background:#0e1530;border:1px solid #222d4f;border-radius:12px;
-           padding:12px 22px;cursor:pointer;color:var(--muted);font-size:1.05rem;transition:border-color .1s,color .1s;outline:none}
-  .subtile:hover{color:var(--fg)}
-  .subtile.focus{border-color:var(--accent);color:var(--fg);box-shadow:0 0 0 3px rgba(59,130,246,.3)}
-  .subtile.danger.focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.3)}
+           padding:12px 22px;cursor:pointer;color:var(--muted);font-size:1.05rem;transition:border-color .1s,color .1s}
+  .subtile:hover{color:var(--fg);border-color:#34508f}
+  html.nav-kbd .subtile:focus{outline:none;border-color:var(--accent);color:var(--fg);box-shadow:0 0 0 3px rgba(59,130,246,.3)}
+  html.nav-kbd .subtile.danger:focus{border-color:var(--bad);box-shadow:0 0 0 3px rgba(239,68,68,.3)}
   .subtile .ico{font-size:1.3rem}
 
+  /* estado "abrindo": feedback imediato ao clicar e bloqueio de clique duplo */
+  .busy{cursor:progress}
+  .busy .sub,.busy .gsys{color:var(--fg)}
+  .busy .sub::before,.busy .gsys::before{content:"";display:inline-block;width:.8em;height:.8em;margin-right:8px;vertical-align:-.1em;
+    border:2px solid rgba(255,255,255,.25);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .backdrop{position:fixed;inset:0;background:rgba(3,6,15,.6);z-index:4}
+  .backdrop[hidden]{display:none}
   .panel{position:fixed;inset:70px 6vw auto 6vw;max-height:80vh;overflow:auto;background:#10182f;border:1px solid #2a3761;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.5);padding:24px;z-index:5}
   .panel[hidden]{display:none}
   .panel-head{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:18px}
   .panel h2{font-size:1.3rem;margin:0}
   .close,.btn{border:1px solid #35466f;background:#172044;color:var(--fg);border-radius:10px;padding:11px 16px;font:inherit;cursor:pointer}
+  .close:hover,.btn:hover{border-color:#5574b8;background:#1c2852}
   .btn.primary{border-color:var(--accent);background:#1d4ed8}
+  .btn.primary:hover{background:#2563eb}
   .btn.big{font-size:1.2rem;padding:16px 22px;width:100%}
   .btn.danger{border-color:var(--bad);background:#7f1d1d}
+  .btn.danger:hover{background:#991b1b}
+  .btn.armed{background:var(--bad);border-color:#fca5a5;animation:pulse 1s ease-in-out infinite}
+  @keyframes pulse{50%{opacity:.75}}
   .row2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .dash-list{display:grid;gap:10px;margin:14px 0}
-  .dash-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid #243253;border-radius:10px;padding:12px;background:#121a33}
+  .dash-row{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;border:1px solid #243253;border-radius:10px;padding:12px;background:#121a33;text-align:left}
   .dash-name{font-weight:650}
   .dash-url{font-size:.9rem;color:var(--muted);overflow-wrap:anywhere}
   .dash-current{color:var(--ok);font-size:.9rem;margin-top:4px}
   .dash-form{display:grid;grid-template-columns:1fr 2fr auto;gap:10px;margin-top:10px}
+  button.dash-row{width:100%;cursor:pointer}
+  button.dash-row:hover{border-color:#34508f}
   .sec-title{font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:18px 0 8px}
   input{width:100%;border:1px solid #35466f;background:#0b1020;color:var(--fg);border-radius:10px;padding:12px 13px;font:inherit}
+
+  .games{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px}
+  .game{display:flex;flex-direction:column;gap:8px;text-align:left;background:#121a33;border:2px solid #243156;border-radius:14px;padding:12px;cursor:pointer}
+  .game:hover{border-color:#34508f}
+  html.nav-kbd .game:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px rgba(59,130,246,.3)}
+  .cover{aspect-ratio:4/3;border-radius:8px;background:#0b1020;display:grid;place-items:center;font-size:3rem;overflow:hidden}
+  .cover img{width:100%;height:100%;object-fit:contain}
+  .gname{font-weight:650;font-size:1.1rem}
+  .gsys{font-size:.9rem;color:var(--muted)}
+  .muted{color:var(--muted)}
+  .keys{display:flex;flex-wrap:wrap;gap:8px 18px;color:var(--muted);font-size:.95rem;margin-top:14px}
+
+  .toast{position:fixed;left:50%;bottom:64px;transform:translateX(-50%);background:#7f1d1d;border:1px solid var(--bad);color:#fff;
+         border-radius:12px;padding:12px 20px;z-index:10;font-size:1.05rem}
+  .toast[hidden]{display:none}
   footer{padding:12px 40px;color:var(--muted);font-size:.9rem;text-align:center}
   kbd{background:#1f2b4d;border-radius:6px;padding:2px 8px;font-size:.9em}
-  @media (max-width:1100px){.apps{grid-template-columns:repeat(3,1fr)}}
-  @media (max-width:680px){.apps{grid-template-columns:repeat(2,1fr)}.dash-row,.dash-form,.row2{grid-template-columns:1fr}.panel{inset:50px 16px auto 16px}}
+  @media (max-width:680px){.dash-row,.dash-form,.row2{grid-template-columns:1fr}.panel{inset:50px 16px auto 16px}header,main{padding-left:16px;padding-right:16px}}
 </style>
 </head>
 <body>
@@ -68,47 +103,62 @@
   </div>
 </header>
 
-<main>
-  <!-- 5 funções principais -->
-  <section class="apps" id="apps">
-    <div class="tile" data-action="mode/dashboard"><div class="ico">📊</div><div class="lbl">Dashboard</div><div class="sub">painéis IoT</div></div>
-    <div class="tile" data-action="ui/tv"><div class="ico">📺</div><div class="lbl">Vídeo</div><div class="sub">YouTube • esportes</div></div>
-    <div class="tile" data-action="mode/ytcast"><div class="ico">📱</div><div class="lbl">YouTube</div><div class="sub">transmitir do celular</div></div>
-    <div class="tile" data-action="mode/musica"><div class="ico">🎵</div><div class="lbl">Música</div><div class="sub">Spotify</div></div>
-    <div class="tile" data-action="mode/games"><div class="ico">🎮</div><div class="lbl">Jogo</div><div class="sub">Zelda • N64</div></div>
-    <div class="tile" data-action="mode/desktop"><div class="ico">🖥️</div><div class="lbl">Desktop</div><div class="sub">ambiente normal</div></div>
+<main id="home">
+  <!-- funções principais -->
+  <section class="apps" aria-label="Aplicativos">
+    <button class="tile" data-action="mode/dashboard"><span class="ico">📊</span><span class="lbl">Dashboard</span><span class="sub">painéis IoT</span></button>
+    <button class="tile" data-action="ui/tv"><span class="ico">📺</span><span class="lbl">Vídeo</span><span class="sub">YouTube • esportes</span></button>
+    <button class="tile" data-action="mode/ytcast"><span class="ico">📱</span><span class="lbl">YouTube</span><span class="sub">transmitir do celular</span></button>
+    <button class="tile" data-action="mode/musica"><span class="ico">🎵</span><span class="lbl">Música</span><span class="sub">Spotify</span></button>
+    <button class="tile" data-action="ui/games"><span class="ico">🎮</span><span class="lbl">Jogo</span><span class="sub">Zelda • N64</span></button>
+    <button class="tile" data-action="mode/desktop"><span class="ico">🖥️</span><span class="lbl">Desktop</span><span class="sub">ambiente normal</span></button>
   </section>
 
   <!-- sistema / configuração (secundário) -->
-  <section class="sysbar" id="sysbar">
-    <div class="subtile" data-action="ui/settings"><span class="ico">⚙️</span> Ajustes</div>
-    <div class="subtile" data-action="ui/help"><span class="ico">ℹ️</span> Como usar</div>
-    <div class="subtile danger" data-action="ui/energy"><span class="ico">⏻</span> Energia</div>
+  <section class="sysbar" aria-label="Sistema">
+    <button class="subtile" data-action="ui/settings"><span class="ico">⚙️</span> Ajustes</button>
+    <button class="subtile" data-action="ui/help"><span class="ico">ℹ️</span> Como usar</button>
+    <button class="subtile danger" data-action="ui/energy"><span class="ico">⏻</span> Energia</button>
   </section>
 </main>
 
+<div class="backdrop" id="backdrop" hidden></div>
+
+<!-- PAINEL: Jogos -->
+<section class="panel" id="gamesPanel" role="dialog" aria-modal="true" aria-labelledby="gamesTitle" hidden>
+  <div class="panel-head"><h2 id="gamesTitle">🎮 Jogos</h2><button class="close">Fechar</button></div>
+  <div class="games" id="gameList"></div>
+  <div class="sec-title">Mais opções</div>
+  <button class="btn" data-action="mode/games">🕹️ Abrir o menu completo do RetroArch</button>
+  <div class="keys">
+    <span>Mover: <kbd>setas</kbd></span><span>A: <kbd>X</kbd></span><span>B: <kbd>Z</kbd></span>
+    <span>Trava-alvo: <kbd>Shift</kbd></span><span>Start: <kbd>Enter</kbd></span><span>Menu do jogo: <kbd>F1</kbd></span>
+    <span>Sair: <kbd>Super</kbd>+<kbd>Esc</kbd></span>
+  </div>
+</section>
+
 <!-- PAINEL: Vídeo (YouTube/Esportes) -->
-<section class="panel" id="tvPanel" hidden>
-  <div class="panel-head"><h2>📺 Vídeo — YouTube / Esportes</h2><button class="close" id="tvClose">Fechar</button></div>
+<section class="panel" id="tvPanel" role="dialog" aria-modal="true" aria-labelledby="tvTitle" hidden>
+  <div class="panel-head"><h2 id="tvTitle">📺 Vídeo — YouTube / Esportes</h2><button class="close">Fechar</button></div>
   <div class="sec-title">Canais ao vivo</div>
   <div id="tvChannels" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px"></div>
   <div class="sec-title">Buscar</div>
   <form id="tvForm" style="display:flex;gap:10px;margin-bottom:14px">
-    <input id="tvQuery" placeholder="ex: brasil x argentina, lo-fi, documentário…" autocomplete="off">
+    <input id="tvQuery" placeholder="ex: brasil x argentina, lo-fi, documentário…" autocomplete="off" aria-label="Buscar no YouTube">
     <button class="btn primary" type="submit">Buscar</button>
   </form>
-  <div id="tvStatus" style="color:var(--muted);margin-bottom:10px"></div>
+  <div id="tvStatus" role="status" style="color:var(--muted);margin-bottom:10px"></div>
   <div id="tvResults" style="display:grid;gap:10px"></div>
 </section>
 
 <!-- PAINEL: Ajustes (Dashboards + AirPlay) -->
-<section class="panel" id="settingsPanel" hidden>
-  <div class="panel-head"><h2>⚙️ Ajustes</h2><button class="close" id="setClose">Fechar</button></div>
+<section class="panel" id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+  <div class="panel-head"><h2 id="setTitle">⚙️ Ajustes</h2><button class="close">Fechar</button></div>
   <div class="sec-title">Painel do modo Dashboard</div>
   <div class="dash-list" id="dashList"></div>
   <form class="dash-form" id="dashForm">
-    <input id="dashName" name="name" placeholder="Nome" autocomplete="off">
-    <input id="dashUrl" name="url" placeholder="http://servidor:porta/" autocomplete="off">
+    <input id="dashName" name="name" placeholder="Nome" autocomplete="off" aria-label="Nome do dashboard">
+    <input id="dashUrl" name="url" placeholder="http://servidor:porta/" autocomplete="off" aria-label="URL do dashboard">
     <button class="btn primary" type="submit">Adicionar</button>
   </form>
   <div class="sec-title">Espelhar tela (AirPlay)</div>
@@ -117,8 +167,8 @@
 </section>
 
 <!-- PAINEL: Energia -->
-<section class="panel" id="energyPanel" hidden>
-  <div class="panel-head"><h2>⏻ Energia</h2><button class="close" id="enClose">Fechar</button></div>
+<section class="panel" id="energyPanel" role="dialog" aria-modal="true" aria-labelledby="enTitle" hidden>
+  <div class="panel-head"><h2 id="enTitle">⏻ Energia</h2><button class="close">Fechar</button></div>
   <div class="row2">
     <button class="btn big" data-action="power/reboot" data-confirm="Reiniciar a estação?">↻ Reiniciar</button>
     <button class="btn big danger" data-action="power/shutdown" data-confirm="Desligar a estação?">⏻ Desligar</button>
@@ -126,84 +176,191 @@
 </section>
 
 <!-- PAINEL: Ajuda -->
-<section class="panel" id="helpPanel" hidden>
-  <div class="panel-head"><h2>ℹ️ Como usar</h2><button class="close" id="helpClose">Fechar</button></div>
+<section class="panel" id="helpPanel" role="dialog" aria-modal="true" aria-labelledby="helpTitle" hidden>
+  <div class="panel-head"><h2 id="helpTitle">ℹ️ Como usar</h2><button class="close">Fechar</button></div>
   <div style="display:grid;gap:13px;font-size:1.02rem;line-height:1.55">
     <div><b>📊 Dashboard</b> — abre o painel IoT em tela cheia. Troque a URL em <b>Ajustes</b>.</div>
     <div><b>📺 Vídeo</b> — YouTube e esportes. Toque num canal ao vivo (Cazé etc) ou busque. Usa H.264 até 1080p com decode por hardware.</div>
     <div><b>🎵 Música</b> — Spotify. No celular, escolha <b>TV LASDPC</b> em Conectar dispositivo.</div>
-    <div><b>🎮 Jogo</b> — emulador (Zelda OoT e outros N64). Movimento nas <b>setas</b>; A=<b>X</b>, B=<b>Z</b>, trava-alvo=<b>Shift</b>, pausa=<b>Enter</b>. Um controle USB funciona automaticamente.</div>
+    <div><b>🎮 Jogo</b> — escolha o jogo na lista; uma tela de carregamento mostra o progresso até o jogo abrir. Movimento nas <b>setas</b>; A=<b>X</b>, B=<b>Z</b>, trava-alvo=<b>Shift</b>, pausa=<b>Enter</b>, menu do jogo=<b>F1</b>. Um controle USB funciona automaticamente.</div>
     <div><b>🖥️ Desktop</b> — ambiente gráfico normal.</div>
     <hr style="border-color:#1f2b4d;margin:4px 0">
+    <div><b>Neste menu:</b> mouse, <kbd>setas</kbd>/<kbd>Tab</kbd> + <kbd>Enter</kbd>, ou controle (direcional + A). <kbd>Esc</kbd>, <kbd>Backspace</kbd> ou B fecham a janela aberta.</div>
     <div><b>Sair de qualquer app:</b> tecla <kbd>Super</kbd>+<kbd>Esc</kbd> (Windows+Esc) volta a este menu.</div>
     <div style="color:var(--muted);font-size:.9rem">Admin remoto: <code>ssh lasdpc@10.0.1.218</code> (LAN) ou via Tailscale. Em travamento, use <b>Energia → Reiniciar</b>.</div>
   </div>
 </section>
 
-<footer>Navegue com <kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd> ou controle • <kbd>Enter</kbd> seleciona • <kbd>Super</kbd>+<kbd>Esc</kbd> volta ao menu</footer>
+<div class="toast" id="toast" role="alert" hidden></div>
+
+<footer><kbd>←</kbd><kbd>→</kbd><kbd>↑</kbd><kbd>↓</kbd>, mouse ou controle • <kbd>Enter</kbd> seleciona • <kbd>Esc</kbd> fecha • <kbd>Super</kbd>+<kbd>Esc</kbd> volta ao menu</footer>
 
 <script>
-const items=[...document.querySelectorAll('.tile, .subtile')];
-let idx=0;
-const appsCount=document.querySelectorAll('.apps .tile').length;
-function focusItem(i){ idx=(i+items.length)%items.length; items.forEach((t,k)=>t.classList.toggle('focus',k===idx)); items[idx].focus(); }
-function anyPanelOpen(){ return [...document.querySelectorAll('.panel')].some(p=>!p.hidden); }
-async function act(t){
-  const a=t.dataset.action, c=t.dataset.confirm;
-  if(c && !confirm(c)) return;
-  if(a==='ui/help'){ openPanel('helpPanel'); return; }
-  if(a==='ui/settings'){ openSettings(); return; }
-  if(a==='ui/energy'){ openPanel('energyPanel'); return; }
-  if(a==='ui/tv'){ openTv(); return; }
-  try{ await fetch('/api/'+a,{method:'POST'}); }catch(e){}
+const $=s=>document.querySelector(s);
+const home=$('#home'), backdrop=$('#backdrop');
+
+// ---------- modo de navegação: anel de foco só com teclado/controle ----------
+function navMode(kbd){ document.documentElement.classList.toggle('nav-kbd',kbd); }
+// mousemove sintético (layout mudou sob o cursor parado) não conta como uso do mouse
+addEventListener('mousemove',e=>{ if(e.movementX||e.movementY) navMode(false); },{passive:true});
+addEventListener('mousedown',()=>navMode(false));
+
+// ---------- foco / navegação espacial ----------
+let panel=null, opener=null;
+function scope(){ return panel||home; }
+function focusables(root){
+  return [...root.querySelectorAll('button,input,a[href],[tabindex]:not([tabindex="-1"])')]
+    .filter(el=>!el.disabled&&el.offsetParent!==null);
 }
+function focusEl(el){ if(el){ el.focus(); el.scrollIntoView({block:'nearest'}); } }
+// Vai para o elemento mais próximo na direção pedida, a partir do focado.
+// Funciona com qualquer layout (grid que quebra linha, painéis, formulários).
+function move(dir){
+  const list=focusables(scope());
+  if(!list.length) return;
+  const cur=document.activeElement;
+  if(!list.includes(cur)){ focusEl(list[0]); return; }
+  const r=cur.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+  let best=null, bestScore=Infinity;
+  for(const el of list){
+    if(el===cur) continue;
+    const b=el.getBoundingClientRect(), dx=b.left+b.width/2-cx, dy=b.top+b.height/2-cy;
+    let main, cross;
+    if(dir==='right'){ if(b.left<r.right-2) continue; main=dx; cross=Math.abs(dy); }
+    else if(dir==='left'){ if(b.right>r.left+2) continue; main=-dx; cross=Math.abs(dy); }
+    else if(dir==='down'){ if(b.top<r.bottom-2) continue; main=dy; cross=Math.abs(dx); }
+    else { if(b.bottom>r.top+2) continue; main=-dy; cross=Math.abs(dx); }
+    const score=main+cross*2;
+    if(score<bestScore){ bestScore=score; best=el; }
+  }
+  focusEl(best);
+}
+
 document.addEventListener('keydown',e=>{
-  if(anyPanelOpen()){
-    if(e.key==='Escape') closePanels();
-    if(/INPUT|BUTTON/.test(document.activeElement.tagName)) return;
+  const typing=/^(INPUT|TEXTAREA)$/.test(e.target.tagName);
+  const dir={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];
+  if(dir||e.key==='Tab') navMode(true);
+  if(e.key==='Escape'||(e.key==='Backspace'&&!typing)){
+    if(panel){ e.preventDefault(); closePanel(); }
     return;
   }
-  // grid de apps: 5 colunas em cima, barra embaixo
-  if(e.key==='ArrowRight') focusItem(idx+1);
-  else if(e.key==='ArrowLeft') focusItem(idx-1);
-  else if(e.key==='ArrowDown') focusItem(idx<appsCount?appsCount:0);
-  else if(e.key==='ArrowUp') focusItem(idx>=appsCount?0:idx);
-  else if(e.key==='Enter'||e.key===' ') act(items[idx]);
+  if(!dir) return;                              // Enter/Espaço: nativos do <button>
+  if(typing&&(dir==='left'||dir==='right')) return; // move o cursor no texto
+  e.preventDefault(); move(dir);
 });
-items.forEach((t,k)=>{ t.tabIndex=0; t.addEventListener('click',()=>{idx=k;act(t);}); t.addEventListener('mouseenter',()=>focusItem(k)); });
-focusItem(0);
 
-// Gamepad
-let gpPrev={};
-function gpLoop(){
-  const gps=navigator.getGamepads?navigator.getGamepads():[];
-  for(const gp of gps){ if(!gp) continue;
-    const ax=gp.axes||[], bt=gp.buttons||[];
-    const press=i=>bt[i]&&bt[i].pressed;
-    const edge=(n,v)=>{const p=gpPrev[n];gpPrev[n]=v;return v&&!p;};
-    if(edge('r', press(15)||ax[0]>0.5)) focusItem(idx+1);
-    if(edge('l', press(14)||ax[0]<-0.5)) focusItem(idx-1);
-    if(edge('d', press(13)||ax[1]>0.5)) focusItem(idx<appsCount?appsCount:0);
-    if(edge('u', press(12)||ax[1]<-0.5)) focusItem(idx>=appsCount?0:idx);
-    if(edge('a', press(0))) act(items[idx]);
+// ---------- painéis (modais) ----------
+function openPanel(id,from){
+  if(panel) closePanel(false);
+  panel=document.getElementById(id); opener=from||document.activeElement;
+  panel.hidden=false; backdrop.hidden=false; home.inert=true;
+  const items=focusables(panel);
+  focusEl(items.find(el=>!el.classList.contains('close'))||items[0]);
+}
+function closePanel(restore=true){
+  if(!panel) return;
+  panel.querySelectorAll('[data-armed]').forEach(disarm);
+  panel.hidden=true; backdrop.hidden=true; home.inert=false; panel=null;
+  if(restore) focusEl(opener&&opener.isConnected?opener:focusables(home)[0]);
+}
+backdrop.addEventListener('click',()=>closePanel());
+document.querySelectorAll('.panel .close').forEach(b=>b.addEventListener('click',()=>closePanel()));
+
+// ---------- ações ----------
+let toastTimer;
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.hidden=false; clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.hidden=true,4000); }
+function setBusy(el,on,label){
+  const sub=el.querySelector('.sub,.gsys');
+  if(on){ el.classList.add('busy'); el.setAttribute('aria-busy','true');
+    if(sub){ el.dataset.subText=sub.textContent; sub.textContent=label||'abrindo…'; } }
+  else{ el.classList.remove('busy'); el.removeAttribute('aria-busy');
+    if(sub&&el.dataset.subText!==undefined){ sub.textContent=el.dataset.subText; delete el.dataset.subText; } }
+}
+// Ações perigosas pedem uma 2ª confirmação no próprio botão (funciona com controle).
+function disarm(el){ if(el.dataset.armed){ delete el.dataset.armed; el.innerHTML=el.dataset.orig; el.classList.remove('armed'); } }
+function confirmed(el){
+  if(el.dataset.armed){ return true; }
+  el.dataset.armed='1'; el.dataset.orig=el.innerHTML;
+  el.textContent=el.dataset.confirm+' Pressione de novo'; el.classList.add('armed');
+  setTimeout(()=>disarm(el),4000);
+  return false;
+}
+const UI={ help:f=>openPanel('helpPanel',f), energy:f=>openPanel('energyPanel',f),
+           settings:f=>openSettings(f), tv:f=>openTv(f), games:f=>openGames(f) };
+async function act(el){
+  const a=el.dataset.action;
+  if(a.startsWith('ui/')){ UI[a.slice(3)](el); return; }
+  if(el.dataset.confirm&&!confirmed(el)) return;
+  if(el.classList.contains('busy')) return;     // evita abrir duas vezes
+  setBusy(el,true);
+  try{
+    const r=await fetch('/api/'+a,{method:'POST'});
+    if(!r.ok) throw new Error(r.status);
+    // o kiosk é encerrado ao trocar de modo; se ainda estiver aqui, libera o botão
+    setTimeout(()=>setBusy(el,false),10000);
+  }catch(e){ setBusy(el,false); toast('Não foi possível abrir. Tente de novo.'); }
+}
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-action]');
+  if(el&&!el.closest('[inert]')) act(el);
+});
+
+// ---------- controle (gamepad) ----------
+const gpState={};
+function gpLoop(t){
+  for(const gp of (navigator.getGamepads?navigator.getGamepads():[])){
+    if(!gp) continue;
+    const st=gpState[gp.index]||(gpState[gp.index]={});
+    const bt=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed), ax=gp.axes||[];
+    const dirs={up:bt(12)||ax[1]<-0.5, down:bt(13)||ax[1]>0.5, left:bt(14)||ax[0]<-0.5, right:bt(15)||ax[0]>0.5};
+    for(const d in dirs){                        // segurar repete (400ms, depois 140ms)
+      if(!dirs[d]){ st[d]=0; continue; }
+      if(!st[d]||t>=st[d]){ navMode(true); move(d); st[d]=t+(st[d]?140:400); }
+    }
+    const edge=(k,on,fn)=>{ if(on&&!st[k]) fn(); st[k]=on; };
+    edge('a',bt(0),()=>{ navMode(true); const el=document.activeElement; if(el&&el!==document.body) el.click(); });
+    edge('b',bt(1),()=>{ if(panel) closePanel(); });
   }
   requestAnimationFrame(gpLoop);
 }
 requestAnimationFrame(gpLoop);
 
-// Painéis
 function postJson(p,d){ return fetch(p,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}); }
-function openPanel(id){ closePanels(); const p=document.getElementById(id); p.hidden=false; const b=p.querySelector('.close,button'); b&&b.focus(); }
-function closePanels(){ document.querySelectorAll('.panel').forEach(p=>p.hidden=true); focusItem(idx); }
-document.getElementById('helpClose').onclick=closePanels;
-document.getElementById('enClose').onclick=closePanels;
-document.getElementById('setClose').onclick=closePanels;
-document.getElementById('tvClose').onclick=closePanels;
-// botões com data-action dentro dos painéis
-document.querySelectorAll('.panel [data-action]').forEach(b=>b.addEventListener('click',()=>act(b)));
 
-// Ajustes (Dashboards)
-async function openSettings(){ openPanel('settingsPanel'); await renderDashboards(); }
+// ---------- Jogos ----------
+async function openGames(from){
+  openPanel('gamesPanel',from);
+  const list=$('#gameList');
+  list.innerHTML='<div class="muted">Carregando a lista…</div>';
+  try{
+    const s=await (await fetch('/api/games',{cache:'no-store'})).json();
+    list.innerHTML='';
+    if(!s.games.length){
+      list.innerHTML='<div class="muted">Nenhum jogo encontrado. Copie as ROMs para <code></code> (uma pasta por sistema, ex.: <code>n64/</code>).</div>';
+      list.querySelector('code').textContent=s.roms_dir;
+    }
+    for(const g of s.games){
+      const b=document.createElement('button'); b.className='game';
+      b.innerHTML=`<span class="cover">${g.thumb?`<img alt="" src="/api/games/thumb/${g.id}">`:'🎮'}</span><span class="gname"></span><span class="gsys"></span>`;
+      b.querySelector('.gname').textContent=g.label; b.querySelector('.gsys').textContent=g.system;
+      b.addEventListener('click',()=>playGame(b,g));
+      list.append(b);
+    }
+    if(panel&&panel.id==='gamesPanel') focusEl(list.querySelector('button')||focusables(panel).find(el=>!el.classList.contains('close')));
+  }catch(e){ list.innerHTML='<div class="muted">Erro ao carregar a lista de jogos.</div>'; }
+}
+async function playGame(b,g){
+  if(b.classList.contains('busy')) return;
+  setBusy(b,true,'abrindo…');
+  try{
+    const r=await (await postJson('/api/games/play',{id:g.id})).json();
+    if(!r.ok) throw new Error(r.error);
+    setTimeout(()=>setBusy(b,false),10000);
+  }catch(e){ setBusy(b,false); toast('Não foi possível abrir o jogo.'); }
+}
+
+// ---------- Ajustes (Dashboards) ----------
+async function openSettings(from){ openPanel('settingsPanel',from); await renderDashboards(); }
 async function renderDashboards(){
   const s=await (await fetch('/api/dashboards',{cache:'no-store'})).json();
   const dashList=document.getElementById('dashList'); dashList.innerHTML='';
@@ -213,25 +370,26 @@ async function renderDashboards(){
     meta.innerHTML=`<div class="dash-name"></div><div class="dash-url"></div>${d.url===s.current?'<div class="dash-current">selecionado</div>':''}`;
     meta.querySelector('.dash-name').textContent=d.name; meta.querySelector('.dash-url').textContent=d.url;
     const use=document.createElement('button'); use.className='btn'; use.textContent='Usar';
-    use.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await renderDashboards(); refresh(); };
+    use.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await renderDashboards(); refresh(); focusEl(focusables(dashList)[0]); };
     const open=document.createElement('button'); open.className='btn primary'; open.textContent='Abrir';
-    open.onclick=async()=>{ await postJson('/api/dashboard/select',{id:d.id}); await fetch('/api/mode/dashboard',{method:'POST'}); };
+    open.onclick=async()=>{ setBusy(open,true); await postJson('/api/dashboard/select',{id:d.id}); await fetch('/api/mode/dashboard',{method:'POST'}); };
     row.append(meta,use,open); dashList.append(row);
   }
+  if(panel&&panel.id==='settingsPanel'&&!panel.contains(document.activeElement)) focusEl(focusables(dashList)[0]);
 }
 document.getElementById('dashForm').onsubmit=async(e)=>{
   e.preventDefault();
   const name=document.getElementById('dashName').value.trim(), url=document.getElementById('dashUrl').value.trim();
-  if(!name||!url) return;
+  if(!name||!url){ toast('Preencha nome e URL.'); return; }
   const r=await (await postJson('/api/dashboard/save',{name,url})).json();
-  if(r.ok){ e.target.reset(); await renderDashboards(); }
+  if(r.ok){ e.target.reset(); await renderDashboards(); } else toast(r.error||'URL inválida');
 };
 
-// Vídeo (TV)
+// ---------- Vídeo (TV) ----------
 const tvForm=document.getElementById('tvForm'), tvQuery=document.getElementById('tvQuery');
 const tvResults=document.getElementById('tvResults'), tvChannels=document.getElementById('tvChannels'), tvStatus=document.getElementById('tvStatus');
-async function openTv(){
-  openPanel('tvPanel'); tvResults.innerHTML=''; tvStatus.textContent='';
+async function openTv(from){
+  openPanel('tvPanel',from); tvResults.innerHTML=''; tvStatus.textContent='';
   try{
     const s=await (await fetch('/api/tv/channels',{cache:'no-store'})).json();
     tvChannels.innerHTML='';
@@ -240,35 +398,36 @@ async function openTv(){
       b.onclick=()=>tvPlay(ch.url?{url:ch.url}:{query:ch.query}, ch.name); tvChannels.append(b);
     }
   }catch(e){}
-  setTimeout(()=>tvQuery.focus(),50);
+  focusEl(tvChannels.querySelector('button')||tvQuery);
 }
 async function tvPlay(payload,label){
   tvStatus.textContent='Abrindo '+(label||'')+'… (alguns segundos)';
   try{ const r=await (await postJson('/api/tv/play',payload)).json();
     tvStatus.textContent=r.ok?'Tocando na TV ✓':'Não encontrado: '+(r.error||'');
-    if(r.ok) setTimeout(closePanels,900);
+    if(r.ok) setTimeout(closePanel,900);
   }catch(e){ tvStatus.textContent='Erro de conexão'; }
 }
 async function tvDoSearch(q){
   tvStatus.textContent='Buscando…'; tvResults.innerHTML='';
   try{ const r=await (await postJson('/api/tv/search',{query:q})).json();
     if(!r.ok){ tvStatus.textContent='Erro: '+(r.error||''); return; }
-    tvStatus.textContent=(r.results.length||0)+' resultados — toque para abrir';
+    tvStatus.textContent=(r.results.length||0)+' resultados — escolha para abrir';
     for(const v of r.results){
-      const row=document.createElement('div'); row.className='dash-row';
-      row.style.gridTemplateColumns='120px 1fr auto'; row.style.cursor='pointer';
-      row.innerHTML=`<img alt="" style="width:120px;border-radius:8px" src="https://i.ytimg.com/vi/${v.id}/mqdefault.jpg">
-        <div><div class="dash-name"></div><div class="dash-url"></div></div>
-        <div>${v.live?'<span style="color:var(--bad);font-weight:700">● LIVE</span>':''}</div>`;
+      const row=document.createElement('button'); row.className='dash-row';
+      row.style.gridTemplateColumns='120px 1fr auto';
+      row.innerHTML=`<img alt="" style="width:120px;border-radius:8px" src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg">
+        <span><span class="dash-name" style="display:block"></span><span class="dash-url" style="display:block"></span></span>
+        <span>${v.live?'<span style="color:var(--bad);font-weight:700">● LIVE</span>':''}</span>`;
       row.querySelector('.dash-name').textContent=v.title; row.querySelector('.dash-url').textContent=v.channel;
       row.onclick=()=>tvPlay({url:'https://www.youtube.com/watch?v='+v.id}, v.title);
       tvResults.append(row);
     }
+    focusEl(tvResults.querySelector('button'));
   }catch(e){ tvStatus.textContent='Erro de conexão'; }
 }
 tvForm.onsubmit=e=>{ e.preventDefault(); const q=tvQuery.value.trim(); if(q) tvDoSearch(q); };
 
-// Status
+// ---------- Status ----------
 async function refresh(){
   try{
     const s=await (await fetch('/api/status',{cache:'no-store'})).json();
@@ -281,6 +440,7 @@ async function refresh(){
   }catch(e){}
 }
 refresh(); setInterval(refresh,5000);
+focusEl(focusables(home)[0]);
 </script>
 </body>
 </html>

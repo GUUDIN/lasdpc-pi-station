@@ -26,38 +26,38 @@ logs/retropie-preflight-20260612-130135.md
 
 ## Modo Games
 
-O menu contem a entrada `Emulador`:
+O tile **Jogo** do menu central abre a lista de jogos (uma capa por ROM encontrada em
+`/srv/lasdpc-pi-station/roms/<sistema>/`, com o core certo por sistema). Escolher um
+jogo abre o RetroArch direto nele; o botao "Abrir o menu completo do RetroArch" (ou
+`lasdpc-mode games` por SSH) abre o menu Ozone sem jogo.
 
-```sh
-lasdpc-mode games
-```
+Enquanto carrega, o overlay `lasdpc-loading` fica na tela com o nome do jogo, uma
+barra animada, a etapa atual (lida do log do RetroArch pelo `lasdpc-retroarch`) e os
+segundos decorridos. Ele so sai quando o RetroArch termina de inicializar; se o
+RetroArch fechar antes, mostra "Nao foi possivel abrir o jogo" e volta ao menu
+(log em `~/.config/lasdpc/retroarch-last.log`). Com o core N64 rapido o Zelda OoT
+fica pronto em ~3 s.
 
-Comportamento (atualizado na Etapa 4):
+- Fallbacks opt-in: `LASDPC_GAMES_FRONTEND=ares|esde` em `~/.config/lasdpc/session.env`
+  (ES-DE **nao renderiza no Pi 4**, ver abaixo).
+- Ao sair do RetroArch (menu F1 → Sair) ou com `Super+Esc`, volta para o menu central.
 
-1. Por padrao abre `ares` (multi-sistema, inclui N64).
-2. ES-DE so e usado se `LASDPC_GAMES_FRONTEND=esde` em `~/.config/lasdpc/session.env`
-   — ver abaixo: o AppImage oficial do ES-DE **nao renderiza no Pi 4**.
-3. Se `emulationstation` existir, e usado como ultimo fallback.
-4. Ao sair do emulador, volta automaticamente para `menu`.
+### N64: use o core mupen64plus_next (GLES3)
 
-> **TC-4.4 CONFIRMADO** (2026-06-13): ares v134 abre fullscreen 1920x1080 sem
-> decoracoes na Pi 4, validado por screenshot grim. Requer `GDK_BACKEND=wayland`
-> (nativo Wayland) + regra `ToggleFullscreen` no `labwc-rc.xml`.
-> TCs manuais (gamepad/ROM/desempenho) seguem PENDENTES.
+O `parallel_n64` do buildbot so renderiza rapido via parallel-rdp (Vulkan compute).
+Na V3D do Pi 4 o Zelda OoT roda a ~13 FPS com tela preta/cinza por minutos — parece
+travado. Os plugins GL dele exigem OpenGL desktop e o RetroArch desta estacao e
+compilado com OpenGL ES. Solucao: `make n64-core` compila o `mupen64plus_next`
+(GLideN64, `platform=rpi4_64`, ~30 min) e instala em `/usr/lib/<triplet>/libretro`.
+O menu central e a playlist N64 passam a preferi-lo automaticamente (o RetroArch troca
+sozinho para o driver `glcore` enquanto o jogo roda). Validado em 2026-10-01: OoT
+abre em ~3 s e roda a abertura a 45-60 FPS.
 
-Diretorio criado para ROMs legais de N64:
-
-```text
-/srv/lasdpc-pi-station/roms/n64
-```
-
-Para copiar sua ROM legal de Ocarina of Time:
+Copiar ROM legal:
 
 ```sh
 rsync -avh --progress ./Ocarina-of-Time.z64 lasdpc@100.84.255.77:/srv/lasdpc-pi-station/roms/n64/
 ```
-
-Depois abra `Emulador` no menu e carregue o arquivo pelo ares.
 
 ## Etapa 4 — RetroArch + cores + ES-DE (resultado real)
 

@@ -14,6 +14,10 @@ log ">> Enviando app do menu para $LAUNCHER"
 pi_ssh "sudo mkdir -p $LAUNCHER && sudo chown $PI_USER:$PI_USER $LAUNCHER"
 pi_rsync -a "$PROJECT_DIR/remote/launcher/" "$PI_USER@$PI_HOST:$LAUNCHER/"
 
+log ">> Extensao do kiosk (Esc/Backspace + botao Menu nos dashboards)"
+pi_ssh "sudo mkdir -p $REMOTE_BASE/kiosk && sudo chown $PI_USER:$PI_USER $REMOTE_BASE/kiosk"
+pi_rsync -a --delete "$PROJECT_DIR/remote/kiosk/escape-extension/" "$PI_USER@$PI_HOST:$REMOTE_BASE/kiosk/escape-extension/"
+
 log ">> Instalando serviço systemd lasdpc-launcher"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/lasdpc-launcher.service" "$PI_USER@$PI_HOST:/tmp/lasdpc-launcher.service"
 pi_ssh "sed -i 's/^User=.*/User=$PI_USER/' /tmp/lasdpc-launcher.service"

@@ -151,3 +151,6 @@ Validado em 2026-10-01 numa Pi 4 8 GB com Bookworm + labwc 0.8.1.
 - Receptor Microsoft 2.4GHz v8.0 (045e:0745): scroll hi-res quebrado. Quirk em
   `/etc/libinput/local-overrides.quirks` com `AttrEventCodeDisable=REL_WHEEL_HI_RES;REL_HWHEEL_HI_RES;`
   (libinput 1.22 nao aceita a sintaxe nova `AttrEventCode=-...`).
+- **N64 "travado" (tela cinza/preta, RetroArch a 100% de CPU)**: e o parallel_n64 com
+  parallel-rdp, que na V3D do Pi 4 nao passa de ~13 FPS. Rode `make n64-core`
+  (mupen64plus_next GLES3); ver [gaming.md](gaming.md#n64-use-o-core-mupen64plus_next-gles3).

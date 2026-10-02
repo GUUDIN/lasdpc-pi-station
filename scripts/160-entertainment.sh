@@ -30,7 +30,7 @@ pi_ssh 'A=aarch64-unknown-linux-gnu
   /usr/local/bin/deno --version | head -1'
 
 log ">> Binarios de midia + setup do RetroArch"
-for b in lasdpc-mpv lasdpc-play lasdpc-retroarch lasdpc-retroarch-setup.sh; do
+for b in lasdpc-mpv lasdpc-play lasdpc-retroarch lasdpc-retroarch-setup.sh lasdpc-loading; do
   pi_rsync -a "$PROJECT_DIR/remote/bin/$b" "$PI_USER@$PI_HOST:/tmp/$b"
   pi_ssh "sudo mv /tmp/$b /usr/local/bin/$b && sudo chmod 755 /usr/local/bin/$b"
 done

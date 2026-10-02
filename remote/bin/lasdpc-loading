@@ -1,23 +1,50 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-loading [mensagem] — overlay transitorio fullscreen. Usa mpv com
-# --ontop porque ele fica acima do Chromium kiosk fullscreen de forma confiavel.
-# O lasdpc-session encerra este overlay quando o app de destino ja foi lancado.
+# lasdpc-loading [mensagem]   — mostra o overlay transitorio fullscreen.
+# lasdpc-loading --status TXT — atualiza a etapa exibida ("!TXT" = erro).
+# lasdpc-loading --hide       — encerra o overlay.
+# Usa mpv com --ontop porque ele fica acima do Chromium kiosk / RetroArch
+# fullscreen de forma confiavel. O script loading.lua anima uma barra de
+# progresso com a etapa atual e o tempo decorrido, para a tela nunca parecer
+# travada. Quem lancou o app (lasdpc-session / lasdpc-retroarch) encerra o
+# overlay quando o app de destino esta pronto.
 # ============================================================
 set -u
-MSG="${1:-Carregando}"
 CONF="${HOME:-/home/lasdpc}/.config/lasdpc"
 PNG="$CONF/loading.png"
+STATUS="$CONF/loading_status"
+LUA="/opt/lasdpc-pi-station/launcher/loading.lua"
 mkdir -p "$CONF"
+
+case "${1:-}" in
+  --status)
+    printf '%s\n' "${2:-}" > "$STATUS.tmp" && mv -f "$STATUS.tmp" "$STATUS"
+    exit 0 ;;
+  --hide)
+    # casa pelo comm (mpv/chromium) para nunca matar um shell que so cite o titulo
+    ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
+      case "$comm:$args" in
+        mpv:*"--title=LASDPC Loading"*|chromium:*"--user-data-dir="*"chromium-loading"*)
+          kill "$pid" 2>/dev/null || true ;;
+      esac
+    done
+    exit 0 ;;
+esac
+
+MSG="${1:-Carregando}"
+: > "$STATUS"
+# Com o loading.lua a barra/etapa sao desenhadas ao vivo; o PNG leva so o titulo.
+ANIMATED=0
+[ -f "$LUA" ] && ANIMATED=1
 
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
 
-python3 - "$PNG" "$MSG" <<'PY' >/dev/null 2>&1 || true
+python3 - "$PNG" "$MSG" "$ANIMATED" <<'PY' >/dev/null 2>&1 || true
 import sys
 from PIL import Image, ImageDraw, ImageFont
 
-out, msg = sys.argv[1], sys.argv[2]
+out, msg, animated = sys.argv[1], sys.argv[2], sys.argv[3] == "1"
 W, H = 1920, 1080
 img = Image.new("RGB", (W, H), "#080b0f")
 draw = ImageDraw.Draw(img)
@@ -41,10 +68,10 @@ cx, cy = W // 2, H // 2
 draw.ellipse((cx - 54, cy - 154, cx + 54, cy - 46), outline="#f4c542", width=10)
 draw.arc((cx - 54, cy - 154, cx + 54, cy - 46), 300, 70, fill="#ffffff", width=10)
 
-for text, fnt, y, color in [
-    (msg, title_font, cy + 5, "#f6f7f8"),
-    ("Preparando a tela...", sub_font, cy + 82, "#b7c0ca"),
-]:
+texts = [(msg, title_font, cy + 5, "#f6f7f8")]
+if not animated:
+    texts.append(("Preparando a tela...", sub_font, cy + 82, "#b7c0ca"))
+for text, fnt, y, color in texts:
     box = draw.textbbox((0, 0), text, font=fnt)
     draw.text((cx - (box[2] - box[0]) / 2, y), text, font=fnt, fill=color)
 
@@ -52,9 +79,13 @@ img.save(out)
 PY
 
 if command -v mpv >/dev/null 2>&1 && [ -s "$PNG" ]; then
+  SCRIPT_ARGS=()
+  [ "$ANIMATED" = 1 ] && SCRIPT_ARGS=(--script="$LUA")
+  # sem OSC/atalhos: teclas e mouse sobre o overlay nao devem fazer nada
   exec mpv --no-terminal --really-quiet --force-window=yes --fullscreen --ontop \
     --no-border --keep-open=yes --loop-file=inf --image-display-duration=inf \
-    --title="LASDPC Loading" "$PNG"
+    --no-osc --osd-level=0 --no-input-default-bindings --cursor-autohide=always \
+    --title="LASDPC Loading" "${SCRIPT_ARGS[@]}" "$PNG"
 fi
 
 # Fallback Chromium se mpv/Pillow falhar.

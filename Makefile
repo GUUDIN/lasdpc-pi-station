@@ -63,6 +63,8 @@ gaming-check: ## Etapa 4: checa perfil gaming (TCs automatizados)
 	@$(S)/121-gaming-check.sh
 entertainment: ## Video (mpv+yt-dlp), Musica (Spotify), Jogo (RetroArch) — tudo de uma vez
 	@$(S)/160-entertainment.sh
+n64-core: ## Compila o core N64 rapido (mupen64plus_next GLES3) na Pi — ~30 min
+	@$(S)/161-n64-core.sh
 ytcast: ## YouTube Cast pelo celular (receiver DIAL/Lounge -> mpv HW)
 	@$(S)/170-ytcast.sh
 

@@ -200,8 +200,20 @@ run_app(){
       # docs/gaming.md). Override: LASDPC_GAMES_FRONTEND=ares|esde.
       FRONTEND="${LASDPC_GAMES_FRONTEND:-retroarch}"
       if [ "$FRONTEND" = "retroarch" ] && command -v retroarch >/dev/null 2>&1; then
-        lasdpc-retroarch &
-        wait_app_ready "$!"
+        # Jogo escolhido no menu central: game_request = linha 1 core, linha 2 ROM.
+        # Consumido uma vez; sem ele abre o menu do RetroArch. O proprio
+        # lasdpc-retroarch tira o loading quando o RetroArch fica pronto.
+        GAME_CORE=""; GAME_ROM=""
+        if [ -f "$CONF_DIR/game_request" ]; then
+          { read -r GAME_CORE; read -r GAME_ROM; } < "$CONF_DIR/game_request"
+          rm -f "$CONF_DIR/game_request"
+        fi
+        if [ -n "$GAME_CORE" ] && [ -n "$GAME_ROM" ]; then
+          lasdpc-retroarch "$GAME_CORE" "$GAME_ROM"
+        else
+          lasdpc-retroarch
+        fi
+        LOADING_ACTIVE=0
       elif [ "$FRONTEND" = "esde" ] && [ -x /opt/es-de/ES-DE_aarch64.AppImage ] && command -v lasdpc-esde >/dev/null 2>&1; then
         lasdpc-esde &
         wait_app_ready "$!"

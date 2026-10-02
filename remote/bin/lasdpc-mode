@@ -30,6 +30,8 @@ apply_media_target() {
 }
 
 loading_message() {
+  # quem chama pode personalizar (ex.: menu central passa o nome do jogo)
+  [ -n "${LASDPC_LOADING_MSG:-}" ] && { echo "$LASDPC_LOADING_MSG"; return; }
   case "$NEW" in
     dashboard) echo "Abrindo dashboard" ;;
     menu) echo "Abrindo menu" ;;

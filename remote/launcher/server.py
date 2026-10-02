@@ -5,7 +5,7 @@
 # Bind 127.0.0.1:8090 (somente local; exibido pelo Chromium kiosk).
 # Executado pelo serviço systemd lasdpc-launcher (usuário lasdpc, sudo NOPASSWD).
 # ============================================================
-import json, os, re, shutil, subprocess, socket
+import hashlib, json, os, re, shutil, subprocess, socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -28,6 +28,81 @@ DEFAULT_DASHBOARDS = [
     {"id": "local", "name": "IoT local", "url": "http://localhost:8080"},
     {"id": "andromeda", "name": "Andromeda", "url": "http://andromeda.lasdpc.icmc.usp.br:60107/"},
 ]
+
+# Jogos: pasta de ROMs por sistema -> cores aceitos (o primeiro instalado vence).
+ROMS_DIR = "/srv/lasdpc-pi-station/roms"
+CORE_DIRS = [os.path.expanduser("~/.config/retroarch/cores"), "/usr/lib/aarch64-linux-gnu/libretro"]
+THUMBS_DIR = os.path.expanduser("~/.config/retroarch/thumbnails")
+GAME_SYSTEMS = {
+    "n64": ("Nintendo 64", "Nintendo - Nintendo 64", (".z64", ".n64", ".v64"),
+            ["mupen64plus_next_libretro.so", "parallel_n64_libretro.so"]),
+    "snes": ("Super Nintendo", "Nintendo - Super Nintendo Entertainment System", (".sfc", ".smc", ".zip"),
+             ["snes9x_libretro.so"]),
+    "nes": ("NES", "Nintendo - Nintendo Entertainment System", (".nes", ".zip"), ["nestopia_libretro.so"]),
+    "megadrive": ("Mega Drive", "Sega - Mega Drive - Genesis", (".md", ".gen", ".bin", ".smd", ".zip"),
+                  ["genesis_plus_gx_libretro.so"]),
+    "mastersystem": ("Master System", "Sega - Master System - Mark III", (".sms", ".zip"),
+                     ["genesis_plus_gx_libretro.so"]),
+    "gbc": ("Game Boy Color", "Nintendo - Game Boy Color", (".gbc", ".gb", ".zip"), ["gambatte_libretro.so"]),
+    "gb": ("Game Boy", "Nintendo - Game Boy", (".gb", ".zip"), ["gambatte_libretro.so"]),
+}
+
+def find_core(names):
+    for name in names:
+        for d in CORE_DIRS:
+            p = os.path.join(d, name)
+            if os.path.isfile(p):
+                return p
+    return None
+
+def game_label(filename):
+    """'Legend of Zelda, The - Ocarina of Time (U) [!].z64' -> 'The Legend of Zelda: Ocarina of Time'."""
+    name = os.path.splitext(filename)[0]
+    name = re.sub(r"\s*[\(\[][^\)\]]*[\)\]]", "", name).strip()
+    m = re.match(r"^(.*?), (The|A|An)( - .*)?$", name)
+    if m:
+        name = f"{m.group(2)} {m.group(1)}{m.group(3) or ''}"
+    return name.replace(" - ", ": ", 1)
+
+def game_thumb(playlist, label):
+    # mesmo esquema de nomes de thumbnail do RetroArch: &*/:`<>?\| viram _
+    safe = re.sub(r'[&*/:`<>?\\|"]', "_", label)
+    for kind in ("Named_Boxarts", "Named_Titles", "Named_Snaps"):
+        p = os.path.join(THUMBS_DIR, playlist, kind, safe + ".png")
+        if os.path.isfile(p):
+            return p
+    return None
+
+def games_list():
+    games = []
+    for sysid, (sysname, playlist, exts, cores) in GAME_SYSTEMS.items():
+        core = find_core(cores)
+        d = os.path.join(ROMS_DIR, sysid)
+        if not core or not os.path.isdir(d):
+            continue
+        for fn in sorted(os.listdir(d)):
+            path = os.path.join(d, fn)
+            if not fn.lower().endswith(exts) or not os.path.isfile(path):
+                continue
+            label = game_label(fn)
+            games.append({
+                "id": hashlib.sha1(path.encode()).hexdigest()[:12],
+                "label": label, "system": sysname, "path": path, "core": core,
+                "thumb": game_thumb(playlist, label),
+            })
+    return games
+
+def game_play(payload):
+    wanted = str(payload.get("id") or "")
+    game = next((g for g in games_list() if g["id"] == wanted), None)
+    if game is None:
+        raise ValueError("jogo nao encontrado")
+    os.makedirs(CONF_DIR, exist_ok=True)
+    with open(os.path.join(CONF_DIR, "game_request"), "w") as f:
+        f.write(f"{game['core']}\n{game['path']}\n")
+    env = dict(os.environ, LASDPC_LOADING_MSG=f"Abrindo {game['label']}")
+    subprocess.run(["lasdpc-mode", "games"], env=env)
+    return game
 
 def sh(cmd):
     try:
@@ -279,6 +354,18 @@ class H(BaseHTTPRequestHandler):
             self._send(200, json.dumps(dashboards_load(), ensure_ascii=False))
         elif self.path == "/api/tv/channels":
             self._send(200, json.dumps({"channels": TV_CHANNELS}, ensure_ascii=False))
+        elif self.path == "/api/games":
+            games = [{"id": g["id"], "label": g["label"], "system": g["system"], "thumb": bool(g["thumb"])}
+                     for g in games_list()]
+            self._send(200, json.dumps({"games": games, "roms_dir": ROMS_DIR}, ensure_ascii=False))
+        elif self.path.startswith("/api/games/thumb/"):
+            wanted = self.path.rsplit("/", 1)[-1]
+            game = next((g for g in games_list() if g["id"] == wanted and g["thumb"]), None)
+            if game is None:
+                self._send(404, "not found", "text/plain")
+            else:
+                with open(game["thumb"], "rb") as f:
+                    self._send(200, f.read(), "image/png")
         else:
             self._send(404, "not found", "text/plain")
 
@@ -287,6 +374,9 @@ class H(BaseHTTPRequestHandler):
         if p.startswith("/api/mode/"):
             m = p.rsplit("/", 1)[-1]
             if m in MODES:
+                if m == "games":  # sem jogo escolhido: abre o menu do RetroArch
+                    try: os.remove(os.path.join(CONF_DIR, "game_request"))
+                    except FileNotFoundError: pass
                 subprocess.run(["lasdpc-mode", m])
                 self._send(200, json.dumps({"ok": True, "mode": m}))
             else:
@@ -307,6 +397,12 @@ class H(BaseHTTPRequestHandler):
             try:
                 item = dashboard_save(self._json_body())
                 self._send(200, json.dumps({"ok": True, "dashboard": item}, ensure_ascii=False))
+            except Exception as e:
+                self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        elif p == "/api/games/play":
+            try:
+                game = game_play(self._json_body())
+                self._send(200, json.dumps({"ok": True, "label": game["label"]}, ensure_ascii=False))
             except Exception as e:
                 self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
         elif p == "/api/tv/search":

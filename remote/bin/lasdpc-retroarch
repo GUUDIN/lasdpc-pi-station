@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-retroarch — abre o RetroArch em fullscreen (frontend de emulacao).
+# lasdpc-retroarch [core.so rom] — abre o RetroArch em fullscreen.
+# Sem argumentos abre o menu (Ozone); com core+ROM abre o jogo direto.
 # Roda DENTRO da sessao Wayland (lancado pelo lasdpc-session no modo games).
 # Driver de video: Vulkan (usa a GPU V3D real do Pi4); menu Ozone.
+#
+# Acompanha o log do RetroArch e mantem o overlay lasdpc-loading com a etapa
+# atual ate o app estar de fato pronto (nada de tela parada sem indicacao).
+# Se o RetroArch fechar antes de ficar pronto, mostra o erro e volta ao menu.
 # Sai quando o RetroArch fecha (Quit no menu); o lasdpc-session volta ao menu.
 # ============================================================
 set -u
+CORE="${1:-}"
+ROM="${2:-}"
+CONF="${HOME}/.config/lasdpc"
+LOG="$CONF/retroarch-last.log"
+mkdir -p "$CONF"
 
 # Garante o renderer N64 por Vulkan (parallel-rdp) nas core options.
 # Idempotente: so escreve se faltar, nao sobrescreve ajustes do usuario.
@@ -19,10 +29,77 @@ if [ ! -f "$COREOPTS" ] || ! grep -q '^parallel-n64-gfxplugin' "$COREOPTS" 2>/de
   } >> "$COREOPTS"
 fi
 
+status(){ lasdpc-loading --status "$1" 2>/dev/null || true; }
+games_mode(){ [ "$(tr -d '[:space:]' < "$CONF/mode" 2>/dev/null)" = "games" ]; }
+
 # Regenera a playlist N64 a cada abertura: ROM copiada para roms/n64 aparece sozinha.
+status "Atualizando a lista de jogos..."
 PL=/opt/lasdpc-pi-station/launcher/make_n64_playlist.py
 [ -f "$PL" ] && python3 "$PL" >/dev/null 2>&1 || true
 
-logger -t lasdpc-retroarch "abrindo RetroArch (vulkan/ozone)"
+ARGS=(--verbose)
+if [ -n "$CORE" ] && [ -n "$ROM" ]; then
+  if [ ! -f "$CORE" ] || [ ! -f "$ROM" ]; then
+    logger -t lasdpc-retroarch "core/ROM ausente: $CORE | $ROM"
+    status "!Jogo ou emulador não encontrado"
+    sleep 3
+    exit 1
+  fi
+  ARGS+=(-L "$CORE" "$ROM")
+  logger -t lasdpc-retroarch "abrindo jogo: $ROM ($(basename "$CORE"))"
+else
+  logger -t lasdpc-retroarch "abrindo RetroArch (vulkan/ozone)"
+fi
+
+status "Iniciando o emulador..."
 # sem --fullscreen: o labwc poe a janela em fullscreen (ver labwc-rc.xml)
-exec retroarch
+retroarch "${ARGS[@]}" >"$LOG" 2>&1 &
+RA_PID=$!
+
+# Etapas observadas no log --verbose do RetroArch 1.20 (Pi 4). "Loading
+# favourites file" e a ultima linha da inicializacao, tanto no menu quanto
+# com conteudo: a partir dela o RetroArch ja esta desenhando.
+t0=$(date +%s)
+ready=0
+stage=""
+slow=0
+while kill -0 "$RA_PID" 2>/dev/null; do
+  if [ "$ready" = 0 ]; then
+    new=""
+    if grep -q 'Loading favourites file' "$LOG" 2>/dev/null; then
+      ready=1
+    elif grep -qE '\[Audio\]: Started|M64CMD_EXECUTE' "$LOG" 2>/dev/null; then
+      new="Iniciando o jogo..."
+    elif grep -qE '\[(Vulkan|GL|Video)\]: (Using GPU|Found GL|Set video size)' "$LOG" 2>/dev/null; then
+      new="Preparando o vídeo..."
+    elif grep -qE 'ROM_OPEN|\[Content\]' "$LOG" 2>/dev/null; then
+      new="Lendo o jogo..."
+    elif grep -q 'Loading dynamic libretro core' "$LOG" 2>/dev/null; then
+      new="Carregando o emulador..."
+    fi
+    if [ "$ready" = 1 ]; then
+      # um instante para o primeiro quadro chegar a tela antes de revelar
+      sleep 1.2
+      lasdpc-loading --hide 2>/dev/null || true
+      logger -t lasdpc-retroarch "pronto em $(( $(date +%s) - t0 ))s"
+    elif [ -n "$new" ] && [ "$new" != "$stage" ]; then
+      stage="$new"; status "$stage"
+    elif [ "$slow" = 0 ] && [ $(( $(date +%s) - t0 )) -ge 60 ]; then
+      slow=1; status "Está demorando mais que o normal..."
+      logger -t lasdpc-retroarch "carregamento lento (>60s)"
+    fi
+  fi
+  sleep 0.3
+done
+wait "$RA_PID"
+rc=$?
+
+# Fechou antes de ficar pronto: so avisa se ninguem trocou de modo (Super+Esc
+# durante o loading mata o RetroArch de proposito e ja abre outro overlay).
+if [ "$ready" = 0 ] && games_mode; then
+  logger -t lasdpc-retroarch "RetroArch saiu antes de ficar pronto (rc=$rc); log em $LOG"
+  # o overlay fica ("Voltando ao menu...") ate o lasdpc-session reabrir o menu
+  status "!Não foi possível abrir o jogo"
+  sleep 3
+fi
+exit "$rc"

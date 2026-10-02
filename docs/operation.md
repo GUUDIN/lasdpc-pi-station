@@ -79,6 +79,16 @@ cat ~/.config/lasdpc/mode
 
 Para uma instalacao minima de TV do laboratorio, use apenas `desktop` + `dashboard` + menu central. `media` e `games` devem ser tratados como perfis opcionais por estacao.
 
+### Navegacao
+
+- **Menu central:** mouse, setas/Tab + Enter, ou controle (direcional + A). Esc,
+  Backspace ou B fecham a janela aberta. Energia pede uma 2a confirmacao no botao.
+- **Musica / YouTube (celular):** botao "← Menu", Esc, Backspace ou B voltam ao menu.
+- **Dashboards (kiosk):** Esc volta ao menu, Backspace volta uma pagina, Home abre o
+  dashboard local; ao mexer o mouse aparece um botao "← Menu" no canto. As setas ficam
+  livres para a propria pagina.
+- **Qualquer app:** `Super+Esc` volta ao menu.
+
 ## Midia e Android
 
 O Android e suportado por dois caminhos praticos:
