@@ -5,7 +5,7 @@
 #  - mpv + yt-dlp (binario atual) + deno (JS runtime exigido pelo YouTube)
 #  - fonte de emoji colorido (icones do menu)
 #  - binarios lasdpc-mpv / lasdpc-play / lasdpc-retroarch (+ setup)
-#  - Spotify Connect (raspotify) renomeado para "TV LASDPC"
+#  - confere o Spotify Connect "TV LASDPC" (instalado por make media-install)
 #  - timer semanal de update do yt-dlp
 #  - RetroArch: Vulkan/Ozone + parallel-rdp + controle N64 + playlist/thumbs
 # Requer: perfil base + kiosk ja instalados; sudo NOPASSWD na Pi.
@@ -39,11 +39,11 @@ for p in make_n64_playlist.py fetch_thumbs.py; do
   pi_rsync -a "$PROJECT_DIR/remote/launcher/$p" "$PI_USER@$PI_HOST:/tmp/$p"
 done
 
-log ">> Spotify Connect (raspotify) renomeado para 'TV LASDPC'"
-pi_ssh 'if grep -q LIBRESPOT_NAME /etc/raspotify/conf 2>/dev/null; then
-    sudo sed -i "s|.*LIBRESPOT_NAME.*|LIBRESPOT_NAME=\"TV LASDPC\"|" /etc/raspotify/conf
-  else echo "LIBRESPOT_NAME=\"TV LASDPC\"" | sudo tee -a /etc/raspotify/conf >/dev/null; fi
-  sudo systemctl restart raspotify && echo "   raspotify = TV LASDPC"'
+log ">> Spotify Connect 'TV LASDPC' (instalado por make media-install; aqui so confere)"
+# NAO reiniciar o servico de sistema da raspotify: ele fica desligado de proposito
+# (briga com o PipeWire); o Spotify roda como lasdpc-spotify.service do usuario.
+pi_ssh 'N=$(id -u); env XDG_RUNTIME_DIR=/run/user/$N systemctl --user is-active lasdpc-spotify >/dev/null \
+  && echo "   lasdpc-spotify ativo (TV LASDPC)" || echo "   AVISO: lasdpc-spotify inativo — rode make media-install"'
 
 log ">> Timer semanal de update do yt-dlp"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/yt-dlp-update.service" "$PI_USER@$PI_HOST:/tmp/"

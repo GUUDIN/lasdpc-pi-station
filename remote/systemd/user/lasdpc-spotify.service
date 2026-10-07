@@ -1,0 +1,30 @@
+# LASDPC Station — Spotify Connect ("TV LASDPC") na sessao do usuario.
+# Usa o librespot do pacote raspotify, mas NAO o servico de sistema dele:
+#  - o servico de sistema roda isolado com saida ALSA direta e briga com o
+#    PipeWire da sessao pelo HDMI (ou nao acha a saida padrao);
+#  - aqui o audio vai pelo PipeWire (backend pulseaudio), mixa com o resto e
+#    segue a saida padrao (HDMI);
+#  - descoberta via Avahi: o mDNS interno do librespot anunciava tambem os IPs
+#    das bridges do Docker (172.x), que o celular nao alcanca.
+# Instalado por scripts/110-media-install.sh em ~/.config/systemd/user/.
+[Unit]
+Description=LASDPC Spotify Connect (librespot)
+After=pipewire-pulse.service
+Wants=pipewire-pulse.service
+
+[Service]
+ExecStart=/usr/bin/librespot \
+  --name "TV LASDPC" \
+  --device-type tv \
+  --backend pulseaudio \
+  --bitrate 320 \
+  --zeroconf-backend avahi \
+  --zeroconf-port 5354 \
+  --cache %h/.cache/lasdpc-spotify \
+  --disable-audio-cache \
+  --initial-volume 70
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

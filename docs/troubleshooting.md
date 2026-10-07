@@ -64,6 +64,31 @@ Reinicie o kiosk:
 lasdpc-mode dashboard
 ```
 
+## Spotify: "TV LASDPC" nao aparece no celular
+
+O Spotify Connect roda como servico do usuario (`lasdpc-spotify.service`, librespot do pacote
+raspotify), nao como o servico de sistema da raspotify. Checklist:
+
+```sh
+systemctl --user status lasdpc-spotify                       # ativo?
+avahi-browse -rtp _spotify-connect._tcp | grep wlan0         # anunciado com o IP da rede?
+curl -s "http://$(hostname -I | cut -d' ' -f1):5354/?action=getInfo"   # responde "TV LASDPC"?
+```
+
+Causas ja vistas:
+
+- **Nao instalado**: na migracao para o Bookworm o `make media-install` nao tinha rodado.
+- **Servico de sistema da raspotify**: roda isolado com ALSA direto e briga com o PipeWire da
+  sessao pelo HDMI (aparece mas nao toca, ou cai). Deve ficar `disabled`.
+- **IPs do Docker**: o mDNS interno do librespot anunciava tambem 172.17/18/19.x (bridges do
+  Docker), que o celular nao alcanca. Use `--zeroconf-backend avahi` (ja no unit).
+- **Rede**: o celular precisa estar na **mesma rede** da Pi (10.0.0.0/22). Wi-Fi com isolamento
+  de clientes (eduroam, redes de convidados) bloqueia a descoberta. Depois que alguem conecta
+  uma vez na mesma rede, o login fica em cache e a TV passa a aparecer na lista de dispositivos
+  da conta.
+- **Saida de audio**: o padrao precisa ser o HDMI (`wpctl status`; `wpctl set-default <id>`),
+  senao o som sai pelo conector de fone.
+
 ## Containers fora do ar
 
 ```sh

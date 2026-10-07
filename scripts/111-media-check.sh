@@ -8,11 +8,13 @@ load_env
 log "Etapa 1 — checando perfil media em $PI_HOST"
 
 pi_ssh 'set -euo pipefail
-  userctl(){ sudo -u lasdpc env XDG_RUNTIME_DIR=/run/user/1000 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus systemctl --user "$@"; }
+  N=$(id -u)
+  userctl(){ env XDG_RUNTIME_DIR=/run/user/$N DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$N/bus systemctl --user "$@"; }
   pass(){ printf "PASS %s\n" "$1"; }
   fail(){ printf "FAIL %s: %s\n" "$1" "$2"; exit 1; }
 
-  systemctl is-active --quiet raspotify && pass TC-1.2 || fail TC-1.2 "raspotify inativo"
+  userctl is-active --quiet lasdpc-spotify && pass TC-1.2 || fail TC-1.2 "lasdpc-spotify (Spotify Connect) inativo"
+  curl -fsS --max-time 3 "http://127.0.0.1:5354/?action=getInfo" | grep -q "TV LASDPC" && pass TC-1.2-getInfo || fail TC-1.2 "Spotify Connect nao responde em :5354"
 
   lasdpc-mode media >/tmp/lasdpc-media-check-mode.out
   sleep 5
