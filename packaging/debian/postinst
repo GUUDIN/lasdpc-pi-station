@@ -64,8 +64,14 @@ else
   git -C "$REPO" reset --quiet --hard FETCH_HEAD
 fi
 # ---- 4. chave do Spotify (escolhida nas telas)
-install -m 0755 "$REPO/remote/bin/lasdpc-soloist-key" /usr/local/bin/lasdpc-soloist-key
+# (codigo do canal mais antigo que este pacote: pula com aviso em vez de falhar)
 KEYMODE=""; db_get lasdpc-station/spotify_key 2>/dev/null && KEYMODE="$RET"
+if [ -f "$REPO/remote/bin/lasdpc-soloist-key" ]; then
+  install -m 0755 "$REPO/remote/bin/lasdpc-soloist-key" /usr/local/bin/lasdpc-soloist-key
+elif [ -n "$KEYMODE" ] && [ "$KEYMODE" != "depois" ]; then
+  echo "AVISO: o canal $CHANNEL ainda nao suporta configurar a chave na instalacao; use sudo lasdpc-soloist-setkey depois"
+  KEYMODE="depois"
+fi
 if echo " $APPS " | grep -q " spotify " && [ ! -s /etc/lasdpc/soloist.env ]; then
   case "$KEYMODE" in
     digitar)
