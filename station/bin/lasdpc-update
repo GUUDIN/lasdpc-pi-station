@@ -39,6 +39,10 @@ if [ "$prev" = "$target" ] && [ "$applied" = "$target" ] && [ "$FORCE" = 0 ]; th
   log "ja esta na versao do canal $CHANNEL (${target:0:7})"; exit 0
 fi
 
+# versao que ja falhou (e foi revertida): nao tenta de novo ate sair outra
+if [ "$target" = "$(cat "$STATE/bad" 2>/dev/null)" ] && [ "$FORCE" = 0 ]; then
+  log "versao ${target:0:7} ja falhou antes; aguardando uma nova (ou --force)"; exit 0
+fi
 checkout(){ git -C "$REPO" reset --quiet --hard "$1" && git -C "$REPO" clean -qfdx; }
 log "atualizando ${prev:0:7} -> ${target:0:7} (canal $CHANNEL)"
 checkout "$target"
@@ -49,10 +53,12 @@ if [ $rc = 0 ]; then
   echo "$health"
 fi
 if [ $rc = 0 ]; then
+  rm -f "$STATE/bad"
   log "ok: ${target:0:7}"; record ok "$prev" "$target" "$(git -C "$REPO" log -1 --format=%s)"; exit 0
 fi
 
 log "FALHOU em ${target:0:7}; voltando para ${prev:0:7}"
+echo "$target" > "$STATE/bad"
 checkout "$prev"
 "$REPO/station/bin/lasdpc-apply" --repo "$REPO" >/dev/null 2>&1
 record rolled_back "$prev" "$target" "$(echo "${health:-$out}" | grep -m3 -E 'FALHA|AVISO|rro' )"

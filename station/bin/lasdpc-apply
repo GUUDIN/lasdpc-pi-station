@@ -99,6 +99,10 @@ if [ "$session_changed" = 1 ] && pkill -u "$SESSION_USER" -f '^bash /usr/local/b
   log "sessao reiniciada (codigo novo)"
 fi
 
+# o checkout do agente e do root; deixa usuarios lerem (git log/status) sem erro
+git config --system --get-all safe.directory 2>/dev/null | grep -qx "$BASE_DIR/repo" \
+  || git config --system --add safe.directory "$BASE_DIR/repo"
+
 install -d /var/lib/lasdpc
 git -C "$REPO" rev-parse HEAD > /var/lib/lasdpc/applied 2>/dev/null || true
 if [ ${#failed[@]} -gt 0 ]; then
