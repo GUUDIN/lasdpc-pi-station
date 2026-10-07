@@ -21,18 +21,48 @@
   .back{position:fixed;top:24px;left:24px;font:inherit;font-size:1.1rem;color:inherit;background:rgba(255,255,255,.08);
         border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 18px;cursor:pointer}
   .back:hover,.back:focus-visible{background:rgba(255,255,255,.16);outline:3px solid rgba(255,255,255,.5);outline-offset:2px}
+  [hidden]{display:none!important}
+
+  /* tocando agora */
+  #now{display:grid;grid-template-columns:auto 1fr;gap:48px;align-items:center;text-align:left;max-width:1400px;width:100%}
+  #cover{width:min(42vh,520px);aspect-ratio:1;border-radius:18px;object-fit:cover;background:#13261b;
+         box-shadow:0 24px 70px rgba(0,0,0,.55)}
+  #title{font-size:3.2rem;font-weight:800;line-height:1.1;margin:0 0 12px}
+  #artist{font-size:1.9rem;color:#c7cde0;margin:0 0 6px}
+  #album{font-size:1.35rem;color:#8b93ad;margin:0 0 28px}
+  .bar{height:8px;border-radius:4px;background:rgba(255,255,255,.15);overflow:hidden}
+  .bar>div{height:100%;width:0;background:#1ed760;border-radius:4px}
+  .times{display:flex;justify-content:space-between;color:#8b93ad;font-size:1.1rem;margin-top:8px;font-variant-numeric:tabular-nums}
+  #state{margin-top:18px;font-size:1.2rem;color:#1ed760}
 </style>
 </head>
 <body>
-  <div class="ico">🎵</div>
-  <h1>Música pela TV</h1>
-  <div class="steps">
-    <div><span class="num">1</span>Abra o <b>Spotify</b> no seu celular (mesma rede Wi-Fi)</div>
-    <div><span class="num">2</span>Toque em <b>Conectar dispositivo</b> 🔊</div>
-    <div><span class="num">3</span>Escolha <span class="dev">TV LASDPC</span></div>
+  <!-- aguardando: instrucoes -->
+  <div id="idle">
+    <div class="ico">🎵</div>
+    <h1>Música pela TV</h1>
+    <div class="steps">
+      <div><span class="num">1</span>Abra o <b>Spotify</b> no celular ou computador (mesma rede Wi-Fi)</div>
+      <div><span class="num">2</span>Toque no ícone de <b>dispositivos</b> 🔊</div>
+      <div><span class="num">3</span>Escolha <span class="dev">TV LASDPC</span></div>
+    </div>
+    <div class="wait pulse" id="waitmsg">● aguardando conexão do Spotify…</div>
   </div>
-  <div class="wait pulse">● aguardando conexão do Spotify…</div>
-  <div class="hint">Esc ou Super+Esc volta ao menu • o som sai pela TV/HDMI</div>
+
+  <!-- tocando agora (API WebSocket do Spotify Soloist) -->
+  <div id="now" hidden>
+    <img id="cover" alt="">
+    <div>
+      <p id="title"></p>
+      <p id="artist"></p>
+      <p id="album"></p>
+      <div class="bar"><div id="prog"></div></div>
+      <div class="times"><span id="pos">0:00</span><span id="dur">0:00</span></div>
+      <div id="state"></div>
+    </div>
+  </div>
+
+  <div class="hint">Esc ou Super+Esc volta ao menu • controle pelo app do Spotify • o som sai pela TV/HDMI</div>
 <button class="back" id="back" autofocus>← Menu</button>
 <script>
   // Volta ao menu central: botao (mouse/Enter), Esc/Backspace ou B do controle.
@@ -44,6 +74,62 @@
     for(const g of (navigator.getGamepads?navigator.getGamepads():[])) if(g&&g.buttons[1]&&g.buttons[1].pressed) goMenu();
     requestAnimationFrame(gp);
   })();
+
+  // ---- Estado do Spotify via API WebSocket do Soloist (so em 127.0.0.1) ----
+  const $=id=>document.getElementById(id);
+  let st={logged:false, active:false, status:'idle', item:null, pos:{position_ms:0,timestamp_ms:Date.now(),speed:0}};
+  const fmt=ms=>{ ms=Math.max(0,ms|0); const s=Math.floor(ms/1000); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); };
+
+  function render(){
+    const it=st.item, playing=st.active && it && st.status!=='idle';
+    $('idle').hidden=!!playing; $('now').hidden=!playing;
+    if(!playing){
+      $('waitmsg').textContent = st.active ? '● conectado — escolha uma música no app' : '● aguardando conexão do Spotify…';
+      return;
+    }
+    const d=it.decorations||{};
+    $('title').textContent=(d.identity&&d.identity.name)||'';
+    $('artist').textContent=(d.creators||[]).map(c=>(c.decorations&&c.decorations.identity&&c.decorations.identity.name)||c.name||'').filter(Boolean).join(', ');
+    const alb=d.parent&&d.parent.entity, albName=alb&&alb.decorations&&alb.decorations.identity&&alb.decorations.identity.name;
+    $('album').textContent=albName||'';
+    const covers=((d.visual_identity&&d.visual_identity.cover)||[]).slice().sort((a,b)=>(b.size||0)-(a.size||0));
+    const src=covers[0]&&covers[0].url; if(src && $('cover').src!==src) $('cover').src=src;
+    $('state').textContent = st.status==='paused' ? '⏸ pausado' : st.status==='buffering' ? 'carregando…' : '▶ tocando na TV LASDPC';
+  }
+  function tick(){
+    if(st.item){
+      const dur=(st.item.decorations&&st.item.decorations.playback&&st.item.decorations.playback.duration_ms)||0;
+      const p=st.pos, now=p.position_ms+(Date.now()-p.timestamp_ms)*(p.speed||0);
+      const pos=Math.min(dur||now, now);
+      $('pos').textContent=fmt(pos); $('dur').textContent=fmt(dur);
+      $('prog').style.width=dur?(100*pos/dur)+'%':'0';
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  function apply(m){
+    switch(m.type){
+      case 'auth_state': st.logged=m.logged_in; st.active=m.is_active; break;
+      case 'playback_state':
+        st.status=m.status||st.status; st.item=m.item||null; st.active=m.is_active!==undefined?m.is_active:st.active;
+        if(m.position) st.pos=m.position; break;
+      case 'track_changed': st.item=m.item||m.entity||st.item; break;
+      case 'playback_changed': st.status=m.status||st.status; if(m.position) st.pos=m.position; break;
+      case 'position_sync': st.pos=m.position||m; break;
+      case 'device_changed': st.active=m.is_active!==undefined?m.is_active:st.active; break;
+      default: return;
+    }
+    render();
+  }
+  function connect(){
+    let ws;
+    try{ ws=new WebSocket('ws://127.0.0.1:5355'); }catch(e){ return setTimeout(connect,3000); }
+    ws.onopen=()=>ws.send(JSON.stringify({type:'command',command:'get_state'}));
+    ws.onmessage=e=>{ try{ apply(JSON.parse(e.data)); }catch(_){} };
+    ws.onclose=()=>{ st.active=false; st.item=null; render(); setTimeout(connect,3000); };
+  }
+  connect();
 </script>
 </body>
 </html>

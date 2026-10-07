@@ -29,6 +29,23 @@ pi_rsync -a "$PROJECT_DIR/remote/systemd/user/uxplay.service" "$PI_USER@$PI_HOST
 pi_rsync -a "$PROJECT_DIR/remote/systemd/user/lasdpc-media.target" "$PI_USER@$PI_HOST:/tmp/lasdpc-media.target"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/user/lasdpc-spotify.service" "$PI_USER@$PI_HOST:/tmp/lasdpc-spotify.service"
 
+log "Spotify Soloist (receptor oficial): runtime Docker, scripts e units"
+# O librespot (raspotify) deixou de tocar para contas novas (o Spotify recusa a
+# chave de audio: "error audio key 0 1"); o Soloist e o substituto oficial. Ele so
+# liga depois de `sudo lasdpc-soloist-setkey` (chave gerada com conta Premium).
+pi_ssh "sudo mkdir -p /opt/lasdpc-pi-station/soloist/runtime"
+pi_rsync -a "$PROJECT_DIR/remote/soloist/Dockerfile" "$PI_USER@$PI_HOST:/tmp/soloist.Dockerfile"
+pi_ssh "sudo install -m 0644 /tmp/soloist.Dockerfile /opt/lasdpc-pi-station/soloist/runtime/Dockerfile"
+for f in lasdpc-soloist-update lasdpc-soloist-run lasdpc-soloist-setkey; do
+  pi_rsync -a "$PROJECT_DIR/remote/bin/$f" "$PI_USER@$PI_HOST:/tmp/$f"
+  pi_ssh "sudo install -o root -g root -m 0755 /tmp/$f /usr/local/bin/$f"
+done
+for u in lasdpc-soloist.service lasdpc-soloist-update.service lasdpc-soloist-update.timer; do
+  pi_rsync -a "$PROJECT_DIR/remote/systemd/$u" "$PI_USER@$PI_HOST:/tmp/$u"
+  pi_ssh "sudo install -m 0644 /tmp/$u /etc/systemd/system/$u"
+done
+pi_ssh "sudo systemctl daemon-reload && sudo /usr/local/bin/lasdpc-soloist-update"
+
 log "Instalando pacotes, Raspotify e units"
 pi_ssh "set -euo pipefail
   export DEBIAN_FRONTEND=noninteractive

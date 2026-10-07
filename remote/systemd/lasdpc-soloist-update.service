@@ -1,0 +1,8 @@
+[Unit]
+Description=LASDPC Station - atualiza o Spotify Soloist (builds expiram em 90 dias)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/lasdpc-soloist-update

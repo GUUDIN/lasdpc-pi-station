@@ -1,0 +1,11 @@
+[Unit]
+Description=LASDPC Station - verifica atualizacao do Spotify Soloist toda semana
+
+[Timer]
+OnBootSec=5min
+OnCalendar=weekly
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

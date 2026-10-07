@@ -64,6 +64,27 @@ Reinicie o kiosk:
 lasdpc-mode dashboard
 ```
 
+## Spotify: musicas pulam sem tocar ("error audio key 0 1")
+
+`journalctl --user -u lasdpc-spotify` mostra, para cada faixa, `error audio key 0 1` e
+`Skipping to next track`. E uma mudanca do Spotify contra o librespot (motor da raspotify):
+contas criadas mais recentemente nao recebem mais a chave de audio, e contas antigas sofrem
+limite de taxa (librespot-org/librespot#1649). Nao ha correcao do nosso lado.
+
+Solucao: **Spotify Soloist**, o receptor Spotify Connect oficial para Linux (ago/2026):
+
+1. Com uma conta **Premium**, gere a chave em https://developer.spotify.com/dashboard/soloist
+   (aceite os termos). Depois, qualquer conta (inclusive gratuita) pode conectar.
+2. Na Pi: `sudo lasdpc-soloist-setkey` (a chave e pedida sem eco e fica em
+   `/etc/lasdpc/soloist.env`, 600). Isso desliga o librespot e liga o `lasdpc-soloist.service`.
+
+Detalhes: o binario exige glibc 2.38 (Trixie) e a Pi roda Bookworm, entao ele roda num
+conteiner `debian:trixie-slim` com rede do host e o socket do PipeWire da sessao. Os builds
+expiram em 90 dias e nao podem ser redistribuidos: `lasdpc-soloist-update` baixa do CDN do
+Spotify toda semana (timer) e quando o servico sai com codigo 10 (expirado). A tela da Musica
+le a API WebSocket do Soloist em 127.0.0.1:5355 (sem autenticacao; nao expor) e mostra capa,
+musica, artista e progresso.
+
 ## Spotify: "TV LASDPC" nao aparece no celular
 
 O Spotify Connect roda como servico do usuario (`lasdpc-spotify.service`, librespot do pacote

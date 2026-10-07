@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-soloist-update — baixa o Spotify Soloist (receptor Spotify Connect oficial)
+# do CDN do Spotify e reinicia o servico se a versao mudou. Roda como root
+# (timer semanal lasdpc-soloist-update.timer). Os builds expiram em 90 dias e o
+# Spotify proibe redistribuir o binario: por isso ele e baixado aqui, nunca
+# versionado. Tambem (re)constroi a imagem de runtime (Debian Trixie: o binario
+# exige glibc >= 2.38 e a Pi roda Bookworm).
+# ============================================================
+set -euo pipefail
+BASE=/opt/lasdpc-pi-station/soloist
+URL="https://soloist-builds.spotifycdn.com/soloist_release_arm64.tar.gz"
+IMAGE=lasdpc/soloist-runtime
+mkdir -p "$BASE"
+
+if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+  docker build -q -t "$IMAGE" "$BASE/runtime"
+fi
+
+tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+curl --fail --location -sS -o "$tmp/soloist.tar.gz" "$URL"
+mkdir "$tmp/x" && tar -xzf "$tmp/soloist.tar.gz" -C "$tmp/x"
+ver() { docker run --rm -v "$1":/opt/soloist:ro "$IMAGE" --version 2>/dev/null | head -1; }
+new="$(ver "$tmp/x")"; [ -n "$new" ] || { echo "binario baixado nao executa"; exit 1; }
+old="$( [ -x "$BASE/bin/soloist" ] && ver "$BASE/bin" || true)"
+if [ "$new" = "$old" ]; then
+  echo "Soloist ja atualizado: $old"; exit 0
+fi
+rm -rf "$BASE/bin.new" && mv "$tmp/x" "$BASE/bin.new" && chmod 755 "$BASE/bin.new"
+rm -rf "$BASE/bin.old"; [ -d "$BASE/bin" ] && mv "$BASE/bin" "$BASE/bin.old"
+mv "$BASE/bin.new" "$BASE/bin"
+echo "Soloist: ${old:-nenhum} -> $new"
+logger -t lasdpc-soloist "atualizado: $new"
+systemctl try-restart lasdpc-soloist.service || true
