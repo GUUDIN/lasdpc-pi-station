@@ -8,15 +8,24 @@
   html,body{height:100%;margin:0;overflow:hidden}
   *{box-sizing:border-box}
   body{font-family:system-ui,Segoe UI,Roboto,sans-serif;background:linear-gradient(160deg,#0b1020,#14213d);
-       color:#e6e9f2;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:28px;padding:5vw}
-  .ico{font-size:7rem;line-height:1;filter:drop-shadow(0 8px 24px rgba(120,170,255,.4))}
-  h1{font-size:3rem;margin:0;letter-spacing:.5px}
-  .steps{font-size:1.6rem;line-height:1.9;color:#c7cde0;max-width:900px}
-  .dev{display:inline-block;background:#e6e9f2;color:#0b1020;font-weight:800;border-radius:12px;padding:6px 18px;margin:0 4px}
-  .num{display:inline-flex;width:2.2rem;height:2.2rem;border-radius:50%;background:#e6e9f2;color:#0b1020;
-       font-weight:800;align-items:center;justify-content:center;margin-right:12px;vertical-align:middle}
-  .hint{font-size:1.15rem;color:#8b93ad;margin-top:10px}
-  .wait{font-size:1.2rem;color:#9cc0ff}
+       color:#e6e9f2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3vh;padding:4vh 5vw}
+  h1{font-size:2.8rem;margin:0;letter-spacing:.5px;text-align:center}
+  .lead{font-size:1.35rem;color:#aab3cc;margin:0;text-align:center}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:2.5vw;width:100%;max-width:1500px}
+  .card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:28px 32px}
+  .card h2{display:flex;align-items:center;gap:14px;font-size:1.7rem;margin:0 0 18px}
+  .card h2 .dev-ico{font-size:2.2rem}
+  ol{margin:0;padding:0;list-style:none;counter-reset:s;display:grid;gap:16px}
+  li{counter-increment:s;display:flex;align-items:center;gap:14px;font-size:1.35rem;line-height:1.4;color:#d5dbea}
+  li::before{content:counter(s);flex:none;display:inline-flex;width:2.1rem;height:2.1rem;border-radius:50%;
+             background:#e6e9f2;color:#0b1020;font-weight:800;align-items:center;justify-content:center}
+  .ui{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);border-radius:10px;
+      padding:3px 10px;font-weight:650;color:#fff;white-space:nowrap}
+  .ui svg{width:1.35em;height:1.35em;flex:none}
+  .tv{display:inline-block;background:#e6e9f2;color:#0b1020;font-weight:800;border-radius:10px;padding:3px 14px}
+  .alt{margin-top:18px;font-size:1.1rem;color:#9aa3bd;border-top:1px solid rgba(255,255,255,.1);padding-top:14px}
+  .wait{font-size:1.25rem;color:#9cc0ff}
+  .hint{font-size:1.05rem;color:#8b93ad;text-align:center}
   .pulse{animation:p 1.6s ease-in-out infinite}@keyframes p{0%,100%{opacity:.4}50%{opacity:1}}
   .back{position:fixed;top:24px;left:24px;font:inherit;font-size:1.1rem;color:inherit;background:rgba(255,255,255,.08);
         border:1px solid rgba(255,255,255,.18);border-radius:12px;padding:10px 18px;cursor:pointer}
@@ -24,15 +33,43 @@
 </style>
 </head>
 <body>
-  <div class="ico">📡</div>
-  <h1>Espelhar tela na TV</h1>
-  <div class="steps">
-    <div><span class="num">1</span>Conecte o <b>iPhone, iPad ou Mac</b> à mesma rede Wi-Fi</div>
-    <div><span class="num">2</span>Abra a <b>Central de Controle</b> → <b>Espelhamento de Tela</b> 📱</div>
-    <div><span class="num">3</span>Escolha <span class="dev">TV LASDPC</span></div>
+  <!-- icones desenhados no estilo dos da Apple, para a pessoa reconhecer na tela dela -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="cc" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.5" cy="7.5" r="2.2" fill="currentColor"/><rect x="2" y="13" width="20" height="7" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="6.5" cy="16.5" r="2.2" fill="currentColor"/></symbol>
+    <symbol id="mirror" viewBox="0 0 24 24"><rect x="2" y="3" width="14" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="8" y="10" width="14" height="10" rx="2" fill="currentColor" stroke="currentColor" stroke-width="1.8"/></symbol>
+  </svg>
+
+  <h1>Espelhar a tela na TV</h1>
+  <p class="lead">O aparelho precisa estar no <b>mesmo Wi-Fi do laboratório</b> que esta TV.</p>
+
+  <div class="cards">
+    <section class="card" aria-label="No Mac">
+      <h2><span class="dev-ico">💻</span> No Mac</h2>
+      <ol>
+        <li><span>Na <b>barra de menus</b>, no canto superior direito, clique em
+          <span class="ui"><svg><use href="#cc"/></svg>Central de Controle</span></span></li>
+        <li><span>Clique em <span class="ui"><svg><use href="#mirror"/></svg>Espelhamento de Tela</span></span></li>
+        <li><span>Escolha <span class="tv">TV LASDPC</span></span></li>
+      </ol>
+      <div class="alt">Outro caminho: <b>Ajustes do Sistema → Telas</b> → botão <b>+</b> (Adicionar tela) → <b>TV LASDPC</b>.<br>
+        Para parar: Espelhamento de Tela → <b>TV LASDPC</b> de novo.</div>
+    </section>
+
+    <section class="card" aria-label="No iPhone ou iPad">
+      <h2><span class="dev-ico">📱</span> No iPhone ou iPad</h2>
+      <ol>
+        <li><span>Deslize para baixo a partir do <b>canto superior direito</b> da tela
+          (abre a Central de Controle)</span></li>
+        <li><span>Toque em <span class="ui"><svg><use href="#mirror"/></svg>Espelhamento de Tela</span></span></li>
+        <li><span>Escolha <span class="tv">TV LASDPC</span></span></li>
+      </ol>
+      <div class="alt">Vídeo do app do YouTube: toque em <b>Transmitir</b> → <b>AirPlay</b> → <b>TV LASDPC</b>.<br>
+        Para parar: Espelhamento de Tela → <b>Parar Espelhamento</b>.</div>
+    </section>
   </div>
+
   <div class="wait pulse">● aguardando conexão AirPlay…</div>
-  <div class="hint">Esc ou Super+Esc volta ao menu • no app do YouTube, use Transmitir → AirPlay</div>
+  <div class="hint">Não aparece? Confira o Wi-Fi do aparelho • Esc ou Super+Esc volta ao menu</div>
 <button class="back" id="back" autofocus>← Menu</button>
 <script>
   // Volta ao menu central: botao (mouse/Enter), Esc/Backspace ou B do controle.
