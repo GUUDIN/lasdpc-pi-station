@@ -1,0 +1,80 @@
+#!/bin/sh
+# Aplica as escolhas da instalacao: verifica o cartao, grava station.conf, baixa o
+# repositorio no canal escolhido e roda o lasdpc-apply.
+set -e
+. /usr/share/debconf/confmodule
+REPO_URL="https://github.com/GUUDIN/lasdpc-pi-station.git"
+REPO=/opt/lasdpc-pi-station/repo
+CONF=/etc/lasdpc/station.conf
+
+[ "$1" = "configure" ] || [ "$1" = "reconfigure" ] || exit 0
+
+# ---- 1. cartao SD
+db_get lasdpc-station/sdcheck
+if [ "$RET" = "true" ]; then
+  echo "Verificando o cartao SD (~1,5 min)..."
+  rc=0; out="$(LASDPC_SDCHECK_NOCOLOR=1 /usr/bin/lasdpc-sdcheck 2>&1)" || rc=$?
+  echo "$out"
+  result="$(echo "$out" | tail -n 12 | sed 's/\x1b\[[0-9;]*m//g')"
+  if [ "$rc" -ge 2 ]; then
+    db_subst lasdpc-station/sdcheck_failed result "$result"
+    db_fset lasdpc-station/sdcheck_failed seen false
+    db_input critical lasdpc-station/sdcheck_failed || true
+    db_go || true
+    db_get lasdpc-station/sdcheck_failed
+    [ "$RET" = "true" ] || { echo "Instalacao cancelada: cartao SD reprovado."; exit 1; }
+  else
+    db_subst lasdpc-station/sdcheck_report result "$result"
+    db_fset lasdpc-station/sdcheck_report seen false
+    db_input high lasdpc-station/sdcheck_report || true
+    db_go || true
+  fi
+  db_set lasdpc-station/sdcheck false   # nao repete em atualizacoes
+fi
+
+# ---- 2. configuracao da estacao (preserva linhas que o usuario adicionou)
+db_get lasdpc-station/name;          NAME="$RET"
+db_get lasdpc-station/apps;          APPS="$(echo "$RET" | tr -d ',')"
+db_get lasdpc-station/channel;       CHANNEL="$RET"
+db_get lasdpc-station/dashboard_url; DASH="$RET"
+install -d -m 0755 /etc/lasdpc
+[ -f "$CONF" ] || cat > "$CONF" <<CONFEOF
+# Configuracao desta estacao (fora do repositorio). Apps: sudo dpkg-reconfigure lasdpc-station
+SESSION_USER="$(id -nu 1000 2>/dev/null || echo pi)"
+AUDIO_OUTPUT="hdmi"
+CONFEOF
+setkey() {  # setkey CHAVE valor
+  if grep -q "^$1=" "$CONF"; then sed -i "s|^$1=.*|$1=\"$2\"|" "$CONF"; else echo "$1=\"$2\"" >> "$CONF"; fi
+}
+setkey STATION_NAME "$NAME"
+setkey APPS "$APPS"
+setkey CHANNEL "$CHANNEL"
+setkey DASHBOARD_URL "$DASH"
+db_stop
+
+# ---- 3. codigo da estacao no canal escolhido + aplicacao
+# rede de laboratorio oscila: ate 5 tentativas antes de desistir
+retry() { n=0; until "$@"; do n=$((n+1)); [ $n -ge 5 ] && return 1; echo "  (rede falhou, tentando de novo em ${n}0 s)"; sleep $((n*10)); done; }
+echo "Baixando a LASDPC Station ($CHANNEL)..."
+if [ ! -d "$REPO/.git" ]; then
+  retry git clone --quiet --branch "$CHANNEL" "$REPO_URL" "$REPO" \
+    || { echo "ERRO: nao consegui baixar $REPO_URL (sem internet?). Rode de novo: sudo dpkg --configure -a"; exit 1; }
+else
+  retry git -C "$REPO" fetch --quiet origin "$CHANNEL" \
+    || { echo "ERRO: nao consegui atualizar o codigo (sem internet?). Rode de novo: sudo dpkg --configure -a"; exit 1; }
+  git -C "$REPO" reset --quiet --hard FETCH_HEAD
+fi
+# O lasdpc-apply instala pacotes com apt, mas o apt que nos chamou ainda segura
+# a trava do dpkg: roda como tarefa do systemd, que espera a trava liberar
+# (DPkg::Lock::Timeout no apt_ensure) e segue sozinha.
+UNIT="lasdpc-setup-$(date +%s)"
+systemd-run --unit="$UNIT" --description="LASDPC Station: instalacao ($APPS)" --collect --no-block \
+  "$REPO/station/bin/lasdpc-apply" --repo "$REPO"
+echo
+echo "================================================================"
+echo " LASDPC Station: instalando a base e os apps ($APPS) em segundo"
+echo " plano. Acompanhe com:   journalctl -fu $UNIT"
+echo " Quando terminar (\"pronto\"), reinicie:   sudo reboot"
+echo " Mudar os apps depois:   sudo dpkg-reconfigure lasdpc-station"
+echo "================================================================"
+exit 0

@@ -11,7 +11,39 @@ GitHub (main) --promover--> GitHub (stable) <--lasdpc-update (04:00 e boot)-- ca
                                                   '-> rollback automático se falhar
 ```
 
-## Estação nova (cartão SD)
+## Estação nova pelo apt (recomendado)
+
+Grave o Raspberry Pi OS (64-bit, Trixie) com o Raspberry Pi Imager e, na Pi:
+
+```sh
+curl -fsSLo /tmp/lasdpc-station.deb https://guudin.github.io/lasdpc-pi-station/lasdpc-station.deb
+sudo apt install /tmp/lasdpc-station.deb
+```
+
+O instalador (telas do debconf/whiptail) verifica o cartão SD, pergunta o nome da estação,
+**quais apps instalar**, o canal e o dashboard; depois baixa o código no canal e instala tudo
+em segundo plano (`journalctl -fu lasdpc-setup-*`). O pacote registra o repositório APT
+(`guudin.github.io/lasdpc-pi-station`), então ele mesmo se atualiza pelo `apt upgrade`.
+Mudar os apps depois: `sudo dpkg-reconfigure lasdpc-station`.
+
+Instalação sem perguntas (várias Pis): responda antes com `debconf-set-selections` (chaves
+`lasdpc-station/{sdcheck,name,apps,channel,dashboard_url}`) e use
+`DEBIAN_FRONTEND=noninteractive`.
+
+### Cartão SD
+
+`lasdpc-sdcheck` roda sozinho no instalador (~1,5 min, não apaga nada): integridade com CRC,
+velocidade sequencial e 4K, erros do controlador e espaço. **Capacidade falsa** (cartão que diz
+64 GB e tem 8) só é detectável antes de gravar, com o cartão num leitor USB:
+`sudo lasdpc-sdcheck --destrutivo /dev/sdX` (apaga tudo; usa `f3probe`, poucos minutos).
+
+### Publicar o pacote
+
+`packaging/publish-apt.sh --push` gera o `.deb`, o repositório APT assinado (chave
+`LASDPC Station APT`, no gpg de quem publica; a pública está em
+`packaging/lasdpc-archive-keyring.gpg`) e envia para a branch `gh-pages`.
+
+## Estação nova (cartão SD) pelo git
 
 1. **Raspberry Pi Imager** → *Raspberry Pi OS (64-bit)* **Trixie** (com desktop). Nas
    configurações do Imager: hostname (ex.: `tv-lab-02`), usuário/senha, Wi-Fi do laboratório,
@@ -35,8 +67,8 @@ O primeiro `install.sh` com o app `games` compila o core N64 (~30 min no Pi 4).
 | App | Obrigatório | O que é |
 |---|---|---|
 | `dashboard` | sim | painel IoT no kiosk (URL em Ajustes ou `DASHBOARD_URL`) |
-| `youtube` | sim | YouTube TV sem anúncios, 1080p por hardware |
-| `spotify` | sim | Spotify Connect "TV LASDPC" (Soloist; librespot de reserva) |
+| `youtube` | não | YouTube TV sem anúncios, 1080p por hardware |
+| `spotify` | não | Spotify Connect "TV LASDPC" (Soloist; librespot de reserva) |
 | `desktop` | sim | ambiente gráfico normal |
 | `games` | não | RetroArch + N64 rápido + perfis por jogo |
 | `airplay` | não | espelhar iPhone/Mac (UxPlay), botão em Ajustes |

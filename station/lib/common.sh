@@ -16,8 +16,10 @@ apt_ensure() {
   for p in "$@"; do dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'ok installed' || missing+=("$p"); done
   [ ${#missing[@]} -eq 0 ] && return 0
   log "apt: instalando ${missing[*]}"
-  DEBIAN_FRONTEND=noninteractive apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${missing[@]}"
+  # espera a trava do dpkg (ex.: chamado logo apos o apt install do pacote)
+  local lock=(-o DPkg::Lock::Timeout=1200)
+  DEBIAN_FRONTEND=noninteractive apt-get "${lock[@]}" update -qq
+  DEBIAN_FRONTEND=noninteractive apt-get "${lock[@]}" install -y --no-install-recommends "${missing[@]}"
 }
 
 # copia so se mudou (instalacao atomica: arquivo novo + rename)

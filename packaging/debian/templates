@@ -1,0 +1,58 @@
+Template: lasdpc-station/sdcheck
+Type: boolean
+Default: true
+Description: Verificar o cartão SD antes de instalar?
+ Leva cerca de 1 minuto e meio e não apaga nada: confere se o cartão grava e lê
+ sem corromper dados, mede a velocidade (cartões genéricos lentos deixam a
+ estação travando) e procura erros do controlador.
+ .
+ Capacidade falsa só é detectável antes de gravar o sistema, com o cartão num
+ leitor USB: sudo lasdpc-sdcheck --destrutivo /dev/sdX
+
+Template: lasdpc-station/sdcheck_failed
+Type: boolean
+Default: false
+Description: O cartão SD foi REPROVADO. Instalar mesmo assim?
+ ${result}
+ .
+ Recomendado: trocar por um cartão A1/A2 de marca e instalar de novo.
+
+Template: lasdpc-station/sdcheck_report
+Type: note
+Description: Resultado da verificação do cartão SD
+ ${result}
+
+Template: lasdpc-station/name
+Type: string
+Default: lasdpc-tv
+Description: Nome desta estação:
+ Identifica a estação (por exemplo tv-lab-01).
+
+Template: lasdpc-station/apps
+Type: multiselect
+Choices: youtube, spotify, games, airplay, kodi
+Default: youtube, spotify
+Description: Quais apps instalar?
+ Menu central, Dashboard e Desktop vêm sempre. Marque os demais (barra de espaço):
+ .
+  youtube - YouTube de TV sem anúncios, 1080p, mandar vídeos do celular
+  spotify - "TV LASDPC" no Spotify (receptor oficial precisa de chave Premium)
+  games   - RetroArch, N64 rápido (1a instalação compila ~30 min)
+  airplay - espelhar a tela de iPhone/iPad/Mac
+  kodi    - central de mídia
+ .
+ Para mudar depois: sudo dpkg-reconfigure lasdpc-station
+
+Template: lasdpc-station/channel
+Type: select
+Choices: stable, main
+Default: stable
+Description: Canal de atualização:
+ stable: só versões promovidas pelos mantenedores (recomendado).
+ main: toda mudança do repositório (para Pis de teste).
+
+Template: lasdpc-station/dashboard_url
+Type: string
+Default: http://localhost:8080
+Description: Endereço do painel do modo Dashboard:
+ Pode ser trocado depois em Ajustes, no menu da estação.

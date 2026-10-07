@@ -29,7 +29,7 @@ RASPOTIFY_SHA256="2097b3994824cf17163ecc47c6f6a5a695202987e2ab0b650f50d663291c63
 if [ "$(dpkg-query -W -f='${Version}' raspotify 2>/dev/null || true)" != "$RASPOTIFY_PKGVER" ]; then
   curl -fsSL -o "/tmp/$RASPOTIFY_DEB" "https://github.com/dtcooper/raspotify/releases/download/$RASPOTIFY_VERSION/$RASPOTIFY_DEB"
   echo "$RASPOTIFY_SHA256  /tmp/$RASPOTIFY_DEB" | sha256sum -c --quiet
-  DEBIAN_FRONTEND=noninteractive apt-get install -y "/tmp/$RASPOTIFY_DEB"
+  DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=1200 install -y "/tmp/$RASPOTIFY_DEB"
 fi
 # o servico de sistema da raspotify briga com o PipeWire da sessao: so o binario e usado
 systemctl disable --now raspotify >/dev/null 2>&1 || true

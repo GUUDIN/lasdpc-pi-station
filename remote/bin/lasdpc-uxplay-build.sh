@@ -18,12 +18,12 @@ if /usr/local/bin/uxplay -v 2>/dev/null | grep -q "version ${VERSION}"; then
 fi
 
 echo ">> dependencias (build + GStreamer com waylandsink, v4l2 e pulse)"
-sudo apt-get install -y --no-install-recommends cmake build-essential pkg-config libssl-dev \
+sudo apt-get -o DPkg::Lock::Timeout=1200 install -y --no-install-recommends cmake build-essential pkg-config libssl-dev \
   libplist-dev libavahi-compat-libdnssd-dev avahi-daemon libgstreamer1.0-dev \
   libgstreamer-plugins-base1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good \
   gstreamer1.0-plugins-bad gstreamer1.0-libav gstreamer1.0-tools gstreamer1.0-pulseaudio
 # o pacote antigo do Debian teria precedencia no PATH de alguns scripts
-sudo apt-get remove -y uxplay 2>/dev/null || true
+sudo apt-get -o DPkg::Lock::Timeout=1200 remove -y uxplay 2>/dev/null || true
 
 tmp="$(mktemp -d)"
 curl -fsSL -o "$tmp/uxplay.tar.gz" "$URL"

@@ -1,0 +1,26 @@
+#!/bin/sh
+# Perguntas da instalacao (debconf). Valores ja configurados viram o padrao.
+set -e
+. /usr/share/debconf/confmodule
+
+# padroes a partir da configuracao existente (reinstalacao/reconfiguracao)
+if [ -f /etc/lasdpc/station.conf ]; then
+  . /etc/lasdpc/station.conf
+  [ -n "${STATION_NAME:-}" ] && db_set lasdpc-station/name "$STATION_NAME"
+  [ -n "${APPS:-}" ] && db_set lasdpc-station/apps "$(echo "$APPS" | sed 's/ \+/, /g')"
+  [ -n "${CHANNEL:-}" ] && db_set lasdpc-station/channel "$CHANNEL"
+  [ -n "${DASHBOARD_URL:-}" ] && db_set lasdpc-station/dashboard_url "$DASHBOARD_URL"
+else
+  db_get lasdpc-station/name
+  [ "$RET" = "lasdpc-tv" ] && db_set lasdpc-station/name "$(hostname)"
+fi
+
+# verificacao do cartao so na primeira instalacao (ou se pedirem de novo)
+if [ ! -f /etc/lasdpc/station.conf ] || [ "${1:-}" = "reconfigure" ]; then
+  db_input high lasdpc-station/sdcheck || true
+fi
+db_input high lasdpc-station/name || true
+db_input high lasdpc-station/apps || true
+db_input high lasdpc-station/channel || true
+db_input high lasdpc-station/dashboard_url || true
+db_go || true

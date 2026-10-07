@@ -25,7 +25,7 @@ if [ -f "$CORE_DIR/mupen64plus_next_libretro.so" ] && [ "$(cat "$STAMP" 2>/dev/n
 fi
 
 echo ">> dependencias de build"
-sudo apt-get install -y --no-install-recommends git build-essential libgles-dev libegl-dev zlib1g-dev libpng-dev
+sudo apt-get -o DPkg::Lock::Timeout=1200 install -y --no-install-recommends git build-essential libgles-dev libegl-dev zlib1g-dev libpng-dev
 
 echo ">> fonte em $SRC @ $COMMIT"
 mkdir -p "$(dirname "$SRC")"

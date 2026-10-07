@@ -108,7 +108,7 @@ else
   echo "${B}2. Integridade (escreve 512 MB e confere cada bloco com CRC)${N}"
   tmp="$(mktemp -p /var/tmp lasdpc-sdcheck.XXXXXX)"; trap 'rm -f "$tmp"' EXIT
   err=$(fio_json err --name=verify --filename="$tmp" --direct=1 --ioengine=psync --size=512M \
-        --rw=write --bs=1M --verify=crc32c --do_verify=1 --verify_fatal=1)
+        --rw=write --bs=1M --verify=crc32c --do_verify=1 --verify_fatal=1 --verify_state_save=0)
   [ "$err" = 0 ] && ok "512 MB escritos e lidos sem nenhum erro" || bad "dados voltaram DIFERENTES do que foi escrito: cartao defeituoso"
   echo "${B}3. Velocidade (via sistema de arquivos)${N}"; speed_tests "$tmp" 256M 1000 250 "equivalente A1 em uso"
   echo "${B}4. Erros do controlador desde o boot${N}"
