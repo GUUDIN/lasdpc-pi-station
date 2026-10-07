@@ -5,7 +5,8 @@
 # Bind 127.0.0.1:8090 (somente local; exibido pelo Chromium kiosk).
 # Executado pelo serviço systemd lasdpc-launcher (usuário lasdpc, sudo NOPASSWD).
 # ============================================================
-import hashlib, json, os, re, shutil, subprocess, socket
+import hashlib, json, os, re, shutil, subprocess, socket, threading
+import keyshare
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -298,6 +299,39 @@ def status():
             "dashboard": env_read().get("DASHBOARD_URL", ""),
             "tailscale": ts, "net": net_ok(), "containers": containers}
 
+# Copiar a chave do Spotify entre estacoes (ver keyshare.py)
+SHARER = keyshare.Sharer()
+FETCH = {"job": None}
+
+class ShareH(BaseHTTPRequestHandler):
+    """Porta 8091, aberta na rede local: SO pedir e buscar a chave aprovada."""
+    def _send(self, code, obj):
+        b = json.dumps(obj).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(b)))
+        self.end_headers()
+        self.wfile.write(b)
+
+    def log_message(self, *a):
+        pass
+
+    def do_POST(self):
+        if self.path != "/share/request":
+            return self._send(404, {"error": "not found"})
+        try:
+            length = min(int(self.headers.get("Content-Length", "0")), 4096)
+            body = json.loads(self.rfile.read(length).decode() or "{}")
+            rid, code = SHARER.request(body.get("name", "?"), self.client_address[0], body["pub"])
+            self._send(200, {"id": rid, "code": code})
+        except Exception as e:
+            self._send(400, {"error": str(e)})
+
+    def do_GET(self):
+        if self.path.startswith("/share/result/"):
+            return self._send(200, SHARER.result(self.path.rsplit("/", 1)[-1]))
+        self._send(404, {"error": "not found"})
+
 class H(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json"):
         b = body if isinstance(body, bytes) else body.encode()
@@ -370,6 +404,15 @@ class H(BaseHTTPRequestHandler):
             self._send(200, json.dumps(dashboards_load(), ensure_ascii=False))
         elif self.path == "/api/tv/channels":
             self._send(200, json.dumps({"channels": TV_CHANNELS}, ensure_ascii=False))
+        elif self.path == "/api/share/pending":
+            self._send(200, json.dumps({"pending": SHARER.pending(), "has_key": SHARER.has_key(),
+                                        "window_until": SHARER.window_until}))
+        elif self.path == "/api/share/stations":
+            self._send(200, json.dumps({"stations": keyshare.discover()}, ensure_ascii=False))
+        elif self.path == "/api/share/fetch":
+            job = FETCH["job"]
+            self._send(200, json.dumps({"state": job.state, "code": job.code, "error": job.error,
+                                        "target": job.target} if job else {"state": "idle"}, ensure_ascii=False))
         elif self.path == "/api/apps":
             keep = ("id", "name", "icon", "sub", "order", "tile", "panel", "settings_button")
             apps = [{k: a[k] for k in keep if k in a} for a in apps_list()]
@@ -419,6 +462,24 @@ class H(BaseHTTPRequestHandler):
                 self._send(200, json.dumps({"ok": True, "dashboard": item}, ensure_ascii=False))
             except Exception as e:
                 self._send(400, json.dumps({"ok": False, "error": str(e)}, ensure_ascii=False))
+        elif p == "/api/share/decide":
+            b = self._json_body()
+            ok = SHARER.decide(str(b.get("id", "")), bool(b.get("allow")))
+            self._send(200, json.dumps({"ok": ok}))
+        elif p == "/api/share/window":
+            until = SHARER.open_window(int(self._json_body().get("minutes", 10)))
+            self._send(200, json.dumps({"ok": True, "window_until": until}))
+        elif p == "/api/share/fetch":
+            target = str(self._json_body().get("target", "")).strip()
+            job = FETCH["job"]
+            if job and job.state in ("starting", "waiting"):
+                self._send(409, json.dumps({"ok": False, "error": "ja existe um pedido em andamento"}))
+            elif not target:
+                self._send(400, json.dumps({"ok": False, "error": "escolha uma estacao"}))
+            else:
+                job = keyshare.Fetch(target); FETCH["job"] = job
+                threading.Thread(target=job.run, daemon=True).start()
+                self._send(200, json.dumps({"ok": True}))
         elif p == "/api/games/play":
             try:
                 game = game_play(self._json_body())
@@ -441,5 +502,9 @@ class H(BaseHTTPRequestHandler):
             self._send(404, "not found", "text/plain")
 
 if __name__ == "__main__":
-    print(f"LASDPC launcher em http://{BIND[0]}:{BIND[1]}")
+    # anuncia a estacao no mDNS (com/sem chave do Spotify) e abre a porta da troca
+    subprocess.run(["sudo", "-n", "lasdpc-soloist-key", "advertise"], capture_output=True)
+    share = ThreadingHTTPServer(("0.0.0.0", keyshare.PORT), ShareH)
+    threading.Thread(target=share.serve_forever, daemon=True).start()
+    print(f"LASDPC launcher em http://{BIND[0]}:{BIND[1]} (troca de chave em :{keyshare.PORT})")
     ThreadingHTTPServer(BIND, H).serve_forever()

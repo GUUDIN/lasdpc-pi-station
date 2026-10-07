@@ -50,7 +50,6 @@ setkey STATION_NAME "$NAME"
 setkey APPS "$APPS"
 setkey CHANNEL "$CHANNEL"
 setkey DASHBOARD_URL "$DASH"
-db_stop
 
 # ---- 3. codigo da estacao no canal escolhido + aplicacao
 # rede de laboratorio oscila: ate 5 tentativas antes de desistir
@@ -64,6 +63,23 @@ else
     || { echo "ERRO: nao consegui atualizar o codigo (sem internet?). Rode de novo: sudo dpkg --configure -a"; exit 1; }
   git -C "$REPO" reset --quiet --hard FETCH_HEAD
 fi
+# ---- 4. chave do Spotify (escolhida nas telas)
+install -m 0755 "$REPO/remote/bin/lasdpc-soloist-key" /usr/local/bin/lasdpc-soloist-key
+KEYMODE=""; db_get lasdpc-station/spotify_key 2>/dev/null && KEYMODE="$RET"
+if echo " $APPS " | grep -q " spotify " && [ ! -s /etc/lasdpc/soloist.env ]; then
+  case "$KEYMODE" in
+    digitar)
+      db_get lasdpc-station/spotify_key_value
+      if [ -n "$RET" ]; then printf '%s\n' "$RET" | /usr/local/bin/lasdpc-soloist-key set >/dev/null && echo "Chave do Spotify salva."; fi
+      db_set lasdpc-station/spotify_key_value "" ;;
+    procurar)
+      echo "Procurando outra estacao com a chave do Spotify na rede..."
+      python3 "$REPO/remote/launcher/keyshare.py" fetch \
+        || echo "AVISO: chave nao copiada; depois use o menu (Ajustes > Spotify) ou sudo lasdpc-soloist-setkey" ;;
+  esac
+fi
+db_stop
+
 # O lasdpc-apply instala pacotes com apt, mas o apt que nos chamou ainda segura
 # a trava do dpkg: roda como tarefa do systemd, que espera a trava liberar
 # (DPkg::Lock::Timeout no apt_ensure) e segue sozinha.

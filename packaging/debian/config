@@ -21,6 +21,15 @@ if [ ! -f /etc/lasdpc/station.conf ] || [ "${1:-}" = "reconfigure" ]; then
 fi
 db_input high lasdpc-station/name || true
 db_input high lasdpc-station/apps || true
+db_go || true
+# chave do Spotify: so se o app foi marcado e esta Pi ainda nao tem chave
+db_get lasdpc-station/apps
+if echo "$RET" | grep -qw spotify && [ ! -s /etc/lasdpc/soloist.env ]; then
+  db_input high lasdpc-station/spotify_key || true
+  db_go || true
+  db_get lasdpc-station/spotify_key
+  if [ "$RET" = "digitar" ]; then db_input high lasdpc-station/spotify_key_value || true; fi
+fi
 db_input high lasdpc-station/channel || true
 db_input high lasdpc-station/dashboard_url || true
 db_go || true

@@ -56,3 +56,22 @@ Type: string
 Default: http://localhost:8080
 Description: Endereço do painel do modo Dashboard:
  Pode ser trocado depois em Ajustes, no menu da estação.
+
+Template: lasdpc-station/spotify_key
+Type: select
+Choices: procurar, digitar, depois
+Default: procurar
+Description: Chave do Spotify (receptor oficial Spotify Soloist):
+ procurar - copiar de outra estação desta rede que já tem a chave. Ela mostra
+            um pedido na TV (ou aprova sozinha com "Permitir compartilhar" em Ajustes)
+ digitar  - colar uma chave gerada em developer.spotify.com/dashboard/soloist
+            (precisa de conta Premium)
+ depois   - configurar mais tarde: menu > Ajustes > Spotify, ou
+            sudo lasdpc-soloist-setkey
+ .
+ Sem chave, o Spotify usa um receptor reserva que pode pular músicas.
+
+Template: lasdpc-station/spotify_key_value
+Type: password
+Description: Cole a chave de API do Spotify Soloist:
+ Ela fica só nesta Pi (/etc/lasdpc/soloist.env, legível apenas pelo root).

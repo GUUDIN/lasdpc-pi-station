@@ -4,7 +4,7 @@ Section: misc
 Priority: optional
 Architecture: all
 Maintainer: LASDPC <pedrogudin@gmail.com>
-Depends: debconf (>= 1.5), whiptail | dialog, git, ca-certificates, curl, fio, python3
+Depends: debconf (>= 1.5), whiptail | dialog, git, ca-certificates, curl, fio, python3, python3-cryptography, avahi-daemon, avahi-utils
 Homepage: https://github.com/GUUDIN/lasdpc-pi-station
 Description: LASDPC Station - estacao multimidia/IoT para Raspberry Pi
  Transforma um Raspberry Pi OS numa estacao de TV do laboratorio: menu central,

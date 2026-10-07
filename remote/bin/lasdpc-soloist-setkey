@@ -1,25 +1,28 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-soloist-setkey — cadastra a chave de API do Spotify Soloist e troca o
-# Spotify da estacao do librespot (raspotify) para o Soloist oficial.
+# lasdpc-soloist-setkey — configura a chave de API do Spotify Soloist.
+#   sudo lasdpc-soloist-setkey               digita a chave (sem aparecer na tela)
+#   sudo lasdpc-soloist-setkey --de ESTACAO  copia de outra estacao da rede (nome ou IP);
+#                                            ela aprova na TV (ou com "Permitir
+#                                            compartilhar" ligado em Ajustes)
+#   sudo lasdpc-soloist-setkey --procurar    copia da primeira estacao com chave achada
 # Gere a chave em https://developer.spotify.com/dashboard/soloist (conta Premium).
-# Uso: sudo lasdpc-soloist-setkey   (a chave e pedida sem aparecer na tela)
+# O mesmo esta no menu: Ajustes -> Spotify -> "Copiar chave de outra estacao".
 # ============================================================
 set -euo pipefail
 [ "$(id -u)" = 0 ] || { echo "rode com sudo"; exit 1; }
-USER_NAME="${SUDO_USER:-${LASDPC_USER:-}}"
-[ -n "$USER_NAME" ] && [ "$USER_NAME" != root ] || { echo "nao sei o usuario da sessao (rode via sudo a partir dele)"; exit 1; }
+KEYSHARE=/opt/lasdpc-pi-station/launcher/keyshare.py
+
+case "${1:-}" in
+  --de)       [ -n "${2:-}" ] || { echo "uso: sudo lasdpc-soloist-setkey --de ESTACAO"; exit 2; }
+              exec python3 "$KEYSHARE" fetch "$2" ;;
+  --procurar) exec python3 "$KEYSHARE" fetch ;;
+  "")         ;;
+  *)          sed -n '3,10p' "$0"; exit 2 ;;
+esac
+
 read -r -s -p "Chave de API do Spotify Soloist: " KEY; echo
 [ -n "$KEY" ] || { echo "chave vazia"; exit 1; }
-install -d -m 0755 /etc/lasdpc
-umask 077
-printf 'SOLOIST_API_KEY=%q\nLASDPC_USER=%q\n' "$KEY" "$USER_NAME" > /etc/lasdpc/soloist.env
-chmod 600 /etc/lasdpc/soloist.env
-# um so "TV LASDPC" na rede: desliga o librespot (que o Spotify passou a recusar)
-U="$(id -u "$USER_NAME")"
-sudo -u "$USER_NAME" env XDG_RUNTIME_DIR="/run/user/$U" systemctl --user disable --now lasdpc-spotify.service 2>/dev/null || true
-systemctl enable --now lasdpc-soloist-update.timer
-systemctl enable lasdpc-soloist.service
-systemctl restart lasdpc-soloist.service
-sleep 4
-systemctl is-active lasdpc-soloist.service && echo "Soloist ativo: escolha 'TV LASDPC' no app do Spotify."
+printf '%s\n' "$KEY" | LASDPC_USER="${SUDO_USER:-}" /usr/local/bin/lasdpc-soloist-key set
+sleep 3
+systemctl is-active lasdpc-soloist.service >/dev/null && echo "Soloist ativo: escolha 'TV LASDPC' no app do Spotify."

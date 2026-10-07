@@ -26,12 +26,27 @@ export REPO SESSION_USER SESSION_UID SESSION_HOME OS_CODENAME
 log "aplicando $(git -C "$REPO" describe --always --dirty 2>/dev/null || echo '?') em $(hostname) ($OS_CODENAME, sessao: $SESSION_USER)"
 
 # ---------------------------------------------------------------- base
-apt_ensure chromium mpv python3 python3-pil inotify-tools git curl rsync \
+apt_ensure chromium mpv python3 python3-pil python3-cryptography inotify-tools git curl rsync \
   avahi-daemon avahi-utils libnotify-bin wireplumber
 
 session_changed=0
 install_file "$REPO/remote/bin/lasdpc-session" /usr/local/bin/lasdpc-session 0755 && session_changed=1
-install_bin lasdpc-apps lasdpc-mode lasdpc-kiosk lasdpc-loading lasdpc-restart-kiosk lasdpc-status
+install_bin lasdpc-apps lasdpc-mode lasdpc-kiosk lasdpc-loading lasdpc-restart-kiosk lasdpc-status \
+  lasdpc-soloist-key lasdpc-sdcheck
+
+# o menu (servidor do usuario da sessao) usa sudo so para estes comandos
+cat > /tmp/lasdpc-sudoers <<SUDO
+# LASDPC Station: comandos que o menu central roda como root
+$SESSION_USER ALL=(root) NOPASSWD: /usr/local/bin/lasdpc-soloist-key, /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff, /usr/bin/docker ps *
+SUDO
+if visudo -cqf /tmp/lasdpc-sudoers; then install -m 0440 /tmp/lasdpc-sudoers /etc/sudoers.d/lasdpc-station; fi
+# anuncio mDNS da estacao (outras Pis acham quem tem a chave do Spotify)
+/usr/local/bin/lasdpc-soloist-key advertise
+# troca de chave entre estacoes (porta 8091, rede local) se houver firewall ativo
+if command -v ufw >/dev/null 2>&1 && ufw status | grep -q 'Status: active'; then
+  ufw allow 8091/tcp comment 'LASDPC troca de chave' >/dev/null
+  ufw allow 5353/udp comment 'mDNS' >/dev/null
+fi
 install_file "$REPO/station/bin/lasdpc-apply"  /usr/local/bin/lasdpc-apply  0755 || true
 install_file "$REPO/station/bin/lasdpc-update" /usr/local/bin/lasdpc-update 0755 || true
 install_file "$REPO/station/bin/lasdpc-health" /usr/local/bin/lasdpc-health 0755 || true

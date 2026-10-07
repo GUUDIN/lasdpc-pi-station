@@ -143,10 +143,39 @@
     <button class="btn primary" type="submit">Adicionar</button>
   </form>
   <!-- apps sem tile (ex.: AirPlay) aparecem aqui como botoes -->
+  <div id="spotifyKey" hidden>
+    <div class="sec-title">Spotify</div>
+    <p id="spotKeyStatus" style="color:var(--muted);margin:0 0 10px"></p>
+    <div class="row2">
+      <button class="btn" id="btnKeyFetch">📥 Copiar chave de outra estação da rede</button>
+      <button class="btn" id="btnKeyShare" hidden>🔓 Permitir compartilhar por 10 min</button>
+    </div>
+  </div>
   <div id="appButtons"></div>
 </section>
 
 <!-- PAINEL: Energia -->
+<!-- PAINEL: copiar a chave do Spotify de outra estacao -->
+<section class="panel" id="keyPanel" role="dialog" aria-modal="true" aria-labelledby="keyTitle" hidden>
+  <div class="panel-head"><h2 id="keyTitle">📥 Copiar chave do Spotify</h2><button class="close">Fechar</button></div>
+  <p style="color:var(--muted);margin:0 0 14px">Escolha uma estação desta rede que já tem a chave. Ela vai pedir
+    aprovação na TV dela (ou aprova sozinha se lá estiver ligado “Permitir compartilhar”).</p>
+  <div id="keyStations" class="dash-list"></div>
+  <div id="keyStatus" role="status" style="font-size:1.15rem;margin-top:10px"></div>
+</section>
+
+<!-- PAINEL: outra estacao pedindo a chave -->
+<section class="panel" id="approvePanel" role="dialog" aria-modal="true" aria-labelledby="apTitle" hidden>
+  <div class="panel-head"><h2 id="apTitle">🔑 Pedido da chave do Spotify</h2><button class="close">Fechar</button></div>
+  <p style="font-size:1.2rem;margin:0 0 6px"><b id="apName"></b> <span id="apIp" style="color:var(--muted)"></span>
+    quer usar a chave do Spotify desta estação.</p>
+  <p style="font-size:1.2rem;margin:0 0 18px">Confira o código na TV dela: <b id="apCode" style="font-size:1.6rem;letter-spacing:.15em"></b></p>
+  <div class="row2">
+    <button class="btn big primary" id="apAllow">✔ Permitir</button>
+    <button class="btn big danger" id="apDeny">✖ Recusar</button>
+  </div>
+</section>
+
 <section class="panel" id="energyPanel" role="dialog" aria-modal="true" aria-labelledby="enTitle" hidden>
   <div class="panel-head"><h2 id="enTitle">⏻ Energia</h2><button class="close">Fechar</button></div>
   <div class="row2">
@@ -340,7 +369,73 @@ async function playGame(b,g){
 }
 
 // ---------- Ajustes (Dashboards) ----------
-async function openSettings(from){ openPanel('settingsPanel',from); await renderDashboards(); }
+async function openSettings(from){ openPanel('settingsPanel',from); renderSpotifyKey(); await renderDashboards(); }
+
+// ---------- Chave do Spotify (copiar de/para outra estacao; ver keyshare.py) ----------
+let spotifyEnabled=false;
+async function renderSpotifyKey(){
+  $('#spotifyKey').hidden=!spotifyEnabled; if(!spotifyEnabled) return;
+  try{
+    const s=await (await fetch('/api/share/pending',{cache:'no-store'})).json();
+    const win=s.window_until*1000>Date.now();
+    $('#spotKeyStatus').textContent = s.has_key
+      ? ('Chave configurada nesta estação.' + (win?' Compartilhamento aberto até '+new Date(s.window_until*1000).toLocaleTimeString().slice(0,5)+'.':''))
+      : 'Sem chave: o Spotify usa o receptor reserva (pode pular músicas). Copie de outra estação ou rode sudo lasdpc-soloist-setkey.';
+    $('#btnKeyShare').hidden=!s.has_key;
+  }catch(e){}
+}
+$('#btnKeyShare').addEventListener('click',async()=>{ await postJson('/api/share/window',{minutes:10}); renderSpotifyKey(); toastOk('Outras estações podem copiar a chave pelos próximos 10 min.'); });
+$('#btnKeyFetch').addEventListener('click',e=>openKeyPanel(e.currentTarget));
+async function openKeyPanel(from){
+  openPanel('keyPanel',from);
+  const list=$('#keyStations'); list.innerHTML='<div class="muted">Procurando estações na rede…</div>'; $('#keyStatus').textContent='';
+  try{
+    const st=(await (await fetch('/api/share/stations',{cache:'no-store'})).json()).stations||[];
+    list.innerHTML='';
+    if(!st.length){ list.innerHTML='<div class="muted">Nenhuma outra estação encontrada nesta rede.</div>'; return; }
+    for(const x of st){
+      const b=document.createElement('button'); b.className='dash-row'; b.style.gridTemplateColumns='1fr auto';
+      b.innerHTML='<span><span class="dash-name" style="display:block"></span><span class="dash-url" style="display:block"></span></span><span></span>';
+      b.querySelector('.dash-name').textContent=x.station; b.querySelector('.dash-url').textContent=x.ip;
+      b.lastChild.textContent=x.has_key?'🔑 com chave':'sem chave'; b.lastChild.style.color=x.has_key?'var(--ok)':'var(--muted)';
+      b.disabled=!x.has_key;
+      b.addEventListener('click',()=>startFetch(x));
+      list.append(b);
+    }
+    focusEl(list.querySelector('button:not([disabled])')||focusables($('#keyPanel'))[0]);
+  }catch(e){ list.innerHTML='<div class="muted">Erro ao procurar estações.</div>'; }
+}
+async function startFetch(x){
+  const st=$('#keyStatus');
+  const r=await (await postJson('/api/share/fetch',{target:x.ip})).json();
+  if(!r.ok){ st.textContent=r.error||'Erro'; return; }
+  const tick=async()=>{
+    const j=await (await fetch('/api/share/fetch',{cache:'no-store'})).json();
+    if(j.state==='waiting') st.innerHTML='Aguardando aprovação na TV de <b></b> — código <b style="font-size:1.4rem;letter-spacing:.15em"></b>';
+    if(j.state==='waiting'){ st.querySelectorAll('b')[0].textContent=x.station; st.querySelectorAll('b')[1].textContent=j.code; }
+    if(j.state==='done'){ st.innerHTML='<span style="color:var(--ok)">✔ Chave copiada! Escolha “TV LASDPC” no app do Spotify.</span>'; renderSpotifyKey(); return; }
+    if(j.state==='denied'||j.state==='timeout'||j.state==='error'){ st.innerHTML='<span style="color:var(--bad)"></span>'; st.firstChild.textContent='✖ '+(j.error||j.state); return; }
+    setTimeout(tick,1500);
+  };
+  st.textContent='Enviando pedido…'; tick();
+}
+// pedidos de outras estacoes: aparecem como aviso no menu
+let apShowing=null;
+async function pollShare(){
+  try{
+    const s=await (await fetch('/api/share/pending',{cache:'no-store'})).json();
+    const p=(s.pending||[])[0];
+    if(p && apShowing!==p.id){
+      apShowing=p.id; $('#apName').textContent=p.name; $('#apIp').textContent='('+p.ip+')'; $('#apCode').textContent=p.code;
+      openPanel('approvePanel'); focusEl($('#apAllow'));
+    }else if(!p && apShowing){ apShowing=null; if(panel&&panel.id==='approvePanel') closePanel(); }
+  }catch(e){}
+}
+async function decide(allow){ if(!apShowing) return; await postJson('/api/share/decide',{id:apShowing,allow}); apShowing=null; closePanel(); }
+$('#apAllow').addEventListener('click',()=>decide(true));
+$('#apDeny').addEventListener('click',()=>decide(false));
+setInterval(pollShare,2000);
+function toastOk(msg){ const t=$('#toast'); t.style.background='#14532d'; t.style.borderColor='var(--ok)'; toast(msg); setTimeout(()=>{t.style.background='';t.style.borderColor='';},4200); }
 async function renderDashboards(){
   const s=await (await fetch('/api/dashboards',{cache:'no-store'})).json();
   const dashList=document.getElementById('dashList'); dashList.innerHTML='';
@@ -382,6 +477,7 @@ refresh(); setInterval(refresh,5000);
 async function loadApps(){
   let apps=[];
   try{ apps=(await (await fetch('/api/apps',{cache:'no-store'})).json()).apps||[]; }catch(e){}
+  spotifyEnabled=apps.some(a=>a.id==='spotify');
   const tiles=$('#appTiles'); tiles.innerHTML='';
   for(const a of apps.filter(a=>a.tile)){
     const b=document.createElement('button'); b.className='tile';

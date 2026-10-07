@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-soloist-key — guarda a chave do Spotify Soloist (root). Usado pelo
+# lasdpc-soloist-setkey, pelo menu (copiar chave de outra estacao) e pelo
+# instalador. A chave fica so em /etc/lasdpc/soloist.env (600, root).
+#   lasdpc-soloist-key status     -> "sim" ou "nao"
+#   lasdpc-soloist-key get        -> imprime a chave (so depois de aprovacao)
+#   lasdpc-soloist-key set        <- le a chave do stdin, grava e liga o Soloist
+# ============================================================
+set -euo pipefail
+ENV=/etc/lasdpc/soloist.env
+[ "$(id -u)" = 0 ] || { echo "rode como root" >&2; exit 1; }
+
+advertise() {  # TXT do anuncio mDNS da estacao (lasdpc-keyshare descobre por aqui)
+  local has="$1" name
+  name="$( . /etc/lasdpc/station.conf 2>/dev/null; echo "${STATION_NAME:-$(hostname)}")"
+  install -d /etc/avahi/services
+  cat > /etc/avahi/services/lasdpc.service <<XML
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">LASDPC $name</name>
+  <service>
+    <type>_lasdpc._tcp</type>
+    <port>8091</port>
+    <txt-record>station=$name</txt-record>
+    <txt-record>spotify_key=$has</txt-record>
+  </service>
+</service-group>
+XML
+}
+
+case "${1:-}" in
+  status) [ -s "$ENV" ] && echo sim || echo nao ;;
+  get)    [ -s "$ENV" ] || exit 2; ( . "$ENV"; printf '%s' "$SOLOIST_API_KEY" ) ;;
+  set)
+    IFS= read -r KEY || true
+    KEY="$(printf '%s' "$KEY" | tr -d '[:space:]')"
+    [ -n "$KEY" ] || { echo "chave vazia" >&2; exit 2; }
+    USER_NAME="${LASDPC_USER:-$( . /etc/lasdpc/station.conf 2>/dev/null; echo "${SESSION_USER:-}")}"
+    USER_NAME="${USER_NAME:-$(id -nu 1000)}"
+    install -d -m 0755 /etc/lasdpc
+    ( umask 077; printf 'SOLOIST_API_KEY=%q\nLASDPC_USER=%q\n' "$KEY" "$USER_NAME" > "$ENV" )
+    chmod 600 "$ENV"
+    advertise yes
+    # um so "TV LASDPC" na rede: desliga a reserva librespot e liga o Soloist
+    # (se o app spotify ainda nao foi instalado, o install.sh dele faz isso depois)
+    U="$(id -u "$USER_NAME")"
+    sudo -u "$USER_NAME" env XDG_RUNTIME_DIR="/run/user/$U" systemctl --user disable --now lasdpc-spotify.service >/dev/null 2>&1 || true
+    if [ -f /etc/systemd/system/lasdpc-soloist.service ]; then
+      systemctl enable --quiet --now lasdpc-soloist-update.timer 2>/dev/null || true
+      systemctl enable --quiet lasdpc-soloist.service
+      systemctl restart lasdpc-soloist.service
+    fi
+    echo "chave salva" ;;
+  advertise) [ -s "$ENV" ] && advertise yes || advertise no ;;
+  *) echo "uso: lasdpc-soloist-key {status|get|set|advertise}" >&2; exit 2 ;;
+esac
