@@ -14,9 +14,19 @@ log ">> Enviando app do menu para $LAUNCHER"
 pi_ssh "sudo mkdir -p $LAUNCHER && sudo chown $PI_USER:$PI_USER $LAUNCHER"
 pi_rsync -a "$PROJECT_DIR/remote/launcher/" "$PI_USER@$PI_HOST:$LAUNCHER/"
 
-log ">> Extensao do kiosk (Esc/Backspace + botao Menu nos dashboards)"
+log ">> Extensoes do kiosk (escape/Menu, h264ify, anuncios do YouTube TV) + uBO Lite"
 pi_ssh "sudo mkdir -p $REMOTE_BASE/kiosk && sudo chown $PI_USER:$PI_USER $REMOTE_BASE/kiosk"
-pi_rsync -a --delete "$PROJECT_DIR/remote/kiosk/escape-extension/" "$PI_USER@$PI_HOST:$REMOTE_BASE/kiosk/escape-extension/"
+for ext in escape-extension h264ify-extension ytads-extension; do
+  pi_rsync -a --delete "$PROJECT_DIR/remote/kiosk/$ext/" "$PI_USER@$PI_HOST:$REMOTE_BASE/kiosk/$ext/"
+done
+for b in lasdpc-youtube lasdpc-ubol-install.sh; do
+  pi_rsync -a "$PROJECT_DIR/remote/bin/$b" "$PI_USER@$PI_HOST:/tmp/$b"
+  pi_ssh "sudo install -o root -g root -m 0755 /tmp/$b /usr/local/bin/$b"
+done
+pi_ssh "/usr/local/bin/lasdpc-ubol-install.sh"
+# Barra de traducao: as flags --disable-translate/Translate nao valem mais no
+# Chromium >= ~140; so a politica gerenciada esconde (ver docs/troubleshooting.md)
+pi_ssh "sudo mkdir -p /etc/chromium/policies/managed && echo '{\"TranslateEnabled\": false}' | sudo tee /etc/chromium/policies/managed/lasdpc-kiosk.json >/dev/null"
 
 log ">> Instalando serviço systemd lasdpc-launcher"
 pi_rsync -a "$PROJECT_DIR/remote/systemd/lasdpc-launcher.service" "$PI_USER@$PI_HOST:/tmp/lasdpc-launcher.service"

@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "LASDPC YouTube TV sem anuncios",
+  "version": "1.0.0",
+  "description": "Remove os anuncios das respostas do player do YouTube TV (mesma tecnica do json-prune do uBlock Origin).",
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["prune.js"],
+      "run_at": "document_start",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ]
+}

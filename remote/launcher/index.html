@@ -107,8 +107,7 @@
   <!-- funções principais -->
   <section class="apps" aria-label="Aplicativos">
     <button class="tile" data-action="mode/dashboard"><span class="ico">📊</span><span class="lbl">Dashboard</span><span class="sub">painéis IoT</span></button>
-    <button class="tile" data-action="ui/tv"><span class="ico">📺</span><span class="lbl">Vídeo</span><span class="sub">YouTube • esportes</span></button>
-    <button class="tile" data-action="mode/ytcast"><span class="ico">📱</span><span class="lbl">YouTube</span><span class="sub">transmitir do celular</span></button>
+    <button class="tile" data-action="mode/youtube"><span class="ico">📺</span><span class="lbl">YouTube</span><span class="sub">sem anúncios • celular</span></button>
     <button class="tile" data-action="mode/musica"><span class="ico">🎵</span><span class="lbl">Música</span><span class="sub">Spotify</span></button>
     <button class="tile" data-action="ui/games"><span class="ico">🎮</span><span class="lbl">Jogo</span><span class="sub">Zelda • N64</span></button>
     <button class="tile" data-action="mode/desktop"><span class="ico">🖥️</span><span class="lbl">Desktop</span><span class="sub">ambiente normal</span></button>
@@ -136,20 +135,6 @@
     <span>C: <kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd></span><span>Start: <kbd>Enter</kbd></span>
     <span>Menu do jogo: <kbd>F1</kbd></span><span>Sair: <kbd>Super</kbd>+<kbd>Esc</kbd></span>
   </div>
-</section>
-
-<!-- PAINEL: Vídeo (YouTube/Esportes) -->
-<section class="panel" id="tvPanel" role="dialog" aria-modal="true" aria-labelledby="tvTitle" hidden>
-  <div class="panel-head"><h2 id="tvTitle">📺 Vídeo — YouTube / Esportes</h2><button class="close">Fechar</button></div>
-  <div class="sec-title">Canais ao vivo</div>
-  <div id="tvChannels" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px"></div>
-  <div class="sec-title">Buscar</div>
-  <form id="tvForm" style="display:flex;gap:10px;margin-bottom:14px">
-    <input id="tvQuery" placeholder="ex: brasil x argentina, lo-fi, documentário…" autocomplete="off" aria-label="Buscar no YouTube">
-    <button class="btn primary" type="submit">Buscar</button>
-  </form>
-  <div id="tvStatus" role="status" style="color:var(--muted);margin-bottom:10px"></div>
-  <div id="tvResults" style="display:grid;gap:10px"></div>
 </section>
 
 <!-- PAINEL: Ajustes (Dashboards + AirPlay) -->
@@ -181,7 +166,7 @@
   <div class="panel-head"><h2 id="helpTitle">ℹ️ Como usar</h2><button class="close">Fechar</button></div>
   <div style="display:grid;gap:13px;font-size:1.02rem;line-height:1.55">
     <div><b>📊 Dashboard</b> — abre o painel IoT em tela cheia. Troque a URL em <b>Ajustes</b>.</div>
-    <div><b>📺 Vídeo</b> — YouTube e esportes. Toque num canal ao vivo (Cazé etc) ou busque. Usa H.264 até 1080p com decode por hardware.</div>
+    <div><b>📺 YouTube</b> — interface de TV do YouTube, sem anúncios, 1080p com decodificação por hardware. Navegue com <b>setas</b>, <b>Enter</b> e <b>Esc</b> (voltar). Para mandar vídeos do celular: no YouTube da TV, <b>Configurações → Vincular com código de TV</b>; no app do celular, digite o código e use <b>Transmitir</b>. Para sair: <kbd>Super</kbd>+<kbd>Esc</kbd> ou o botão <b>← Menu</b> (mexa o mouse).</div>
     <div><b>🎵 Música</b> — Spotify. No celular, escolha <b>TV LASDPC</b> em Conectar dispositivo.</div>
     <div><b>🎮 Jogo</b> — escolha o jogo na lista; uma tela de carregamento mostra o progresso até o jogo abrir. Movimento nas <b>setas</b>; A=<b>X</b>, B=<b>Z</b>, trava-alvo (Z)=<b>Shift</b>, escudo (R)=<b>V</b>, botões C=<b>I J K L</b>, pausa=<b>Enter</b>, menu do jogo=<b>F1</b>. Um controle USB funciona automaticamente.</div>
     <div><b>🖥️ Desktop</b> — ambiente gráfico normal.</div>
@@ -287,7 +272,7 @@ function confirmed(el){
   return false;
 }
 const UI={ help:f=>openPanel('helpPanel',f), energy:f=>openPanel('energyPanel',f),
-           settings:f=>openSettings(f), tv:f=>openTv(f), games:f=>openGames(f) };
+           settings:f=>openSettings(f), games:f=>openGames(f) };
 async function act(el){
   const a=el.dataset.action;
   if(a.startsWith('ui/')){ UI[a.slice(3)](el); return; }
@@ -385,48 +370,6 @@ document.getElementById('dashForm').onsubmit=async(e)=>{
   const r=await (await postJson('/api/dashboard/save',{name,url})).json();
   if(r.ok){ e.target.reset(); await renderDashboards(); } else toast(r.error||'URL inválida');
 };
-
-// ---------- Vídeo (TV) ----------
-const tvForm=document.getElementById('tvForm'), tvQuery=document.getElementById('tvQuery');
-const tvResults=document.getElementById('tvResults'), tvChannels=document.getElementById('tvChannels'), tvStatus=document.getElementById('tvStatus');
-async function openTv(from){
-  openPanel('tvPanel',from); tvResults.innerHTML=''; tvStatus.textContent='';
-  try{
-    const s=await (await fetch('/api/tv/channels',{cache:'no-store'})).json();
-    tvChannels.innerHTML='';
-    for(const ch of (s.channels||[])){
-      const b=document.createElement('button'); b.className='btn'; b.textContent='▶ '+ch.name;
-      b.onclick=()=>tvPlay(ch.url?{url:ch.url}:{query:ch.query}, ch.name); tvChannels.append(b);
-    }
-  }catch(e){}
-  focusEl(tvChannels.querySelector('button')||tvQuery);
-}
-async function tvPlay(payload,label){
-  tvStatus.textContent='Abrindo '+(label||'')+'… (alguns segundos)';
-  try{ const r=await (await postJson('/api/tv/play',payload)).json();
-    tvStatus.textContent=r.ok?'Tocando na TV ✓':'Não encontrado: '+(r.error||'');
-    if(r.ok) setTimeout(closePanel,900);
-  }catch(e){ tvStatus.textContent='Erro de conexão'; }
-}
-async function tvDoSearch(q){
-  tvStatus.textContent='Buscando…'; tvResults.innerHTML='';
-  try{ const r=await (await postJson('/api/tv/search',{query:q})).json();
-    if(!r.ok){ tvStatus.textContent='Erro: '+(r.error||''); return; }
-    tvStatus.textContent=(r.results.length||0)+' resultados — escolha para abrir';
-    for(const v of r.results){
-      const row=document.createElement('button'); row.className='dash-row';
-      row.style.gridTemplateColumns='120px 1fr auto';
-      row.innerHTML=`<img alt="" style="width:120px;border-radius:8px" src="https://i.ytimg.com/vi/${encodeURIComponent(v.id)}/mqdefault.jpg">
-        <span><span class="dash-name" style="display:block"></span><span class="dash-url" style="display:block"></span></span>
-        <span>${v.live?'<span style="color:var(--bad);font-weight:700">● LIVE</span>':''}</span>`;
-      row.querySelector('.dash-name').textContent=v.title; row.querySelector('.dash-url').textContent=v.channel;
-      row.onclick=()=>tvPlay({url:'https://www.youtube.com/watch?v='+v.id}, v.title);
-      tvResults.append(row);
-    }
-    focusEl(tvResults.querySelector('button'));
-  }catch(e){ tvStatus.textContent='Erro de conexão'; }
-}
-tvForm.onsubmit=e=>{ e.preventDefault(); const q=tvQuery.value.trim(); if(q) tvDoSearch(q); };
 
 // ---------- Status ----------
 async function refresh(){

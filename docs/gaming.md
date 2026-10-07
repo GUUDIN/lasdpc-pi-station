@@ -98,6 +98,20 @@ I/J/K/L = botoes C, Enter = Start, F = L, F1 = menu do RetroArch. Os atalhos pad
 RetroArch em `k`/`l`/`f`/`i` (avancar quadro, avanco rapido, fullscreen, netplay) foram
 desligados: o `k` congelava o jogo ao apertar C-baixo.
 
+### Latencia de entrada (OoT)
+
+Medido em 2026-10-07 com `tools/n64-bench` (`lat.py` quadro a quadro, `rtlat.py` em tempo
+real capturando a tela composta):
+
+- O jogo registra o comando em 1-2 quadros (RAM) e desenha no mesmo quadro. O OoT roda a
+  20 quadros por segundo (cada quadro do jogo = 50 ms), entao parte da sensacao de atraso e
+  do proprio jogo, como no N64.
+- O renderizador em thread do GLideN64 soma ~80 ms (fila de quadros esperando o vsync; por
+  isso o jogo parece responsivo no avanco rapido). Sem ele, porem, Kakariko cai de 80 para
+  62 fps (3% de folga) — mantido ligado ate decidir entre essa troca e um overclock.
+- Sem efeito ou pior: 2 imagens de swapchain (desacelera o jogo), hard GPU sync, frame delay
+  automatico, driver de entrada x/wayland/udev. Preemptive frames: indisponivel neste core.
+
 Copiar ROM legal:
 
 ```sh

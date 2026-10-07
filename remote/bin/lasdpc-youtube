@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-youtube — abre YouTube TV em Chromium kiosk.
-# O pareamento/cast é pelo app do YouTube no celular usando código de TV.
+# lasdpc-youtube — abre o YouTube TV (interface de TV, feita para controle
+# remoto/teclado) em Chromium kiosk. Celular: Configuracoes > Vincular com codigo
+# de TV, depois "Transmitir" no app do YouTube.
+# Extensoes: escape (botao Menu), h264ify (H.264 -> decoder de hardware do Pi 4),
+# uBlock Origin Lite (rastreadores/anuncios gerais) e ytads (remove os anuncios do
+# player do YouTube TV, que o uBO Lite nao cobre).
 # ============================================================
 set -u
 
@@ -10,6 +14,8 @@ ENV_FILE="$CONF_DIR/session.env"
 PROFILE="$CONF_DIR/chromium-youtube-tv"
 ESCAPE_EXTENSION="/opt/lasdpc-pi-station/kiosk/escape-extension"
 H264IFY_EXTENSION="/opt/lasdpc-pi-station/kiosk/h264ify-extension"
+UBOL_EXTENSION="/opt/lasdpc-pi-station/kiosk/ubol"
+YTADS_EXTENSION="/opt/lasdpc-pi-station/kiosk/ytads-extension"
 
 YOUTUBE_TV_URL="https://www.youtube.com/tv"
 YOUTUBE_TV_UA="Mozilla/5.0 (SMART-TV; Linux; Tizen 6.5) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/5.0 TV Safari/537.36"
@@ -30,17 +36,14 @@ done
 CHROME_ARGS=(
   --ozone-platform=wayland
   --user-data-dir="$PROFILE"
-  --load-extension="$ESCAPE_EXTENSION,$H264IFY_EXTENSION"
+  --load-extension="$ESCAPE_EXTENSION,$H264IFY_EXTENSION,$UBOL_EXTENSION,$YTADS_EXTENSION"
   --kiosk "$YOUTUBE_TV_URL"
   --start-fullscreen
-  # Decode de hardware: o Pi 4 so tem decoder H.264 (bcm2835-codec/V4L2).
-  # h264ify (acima) garante que o YouTube sirva H.264; estas flags tentam
-  # usar o decoder por hardware. H.264 1080p ainda roda por software no
-  # quad-core caso o HW decode nao engate.
-  --enable-features=AcceleratedVideoDecodeLinuxGL,AcceleratedVideoDecodeLinuxZeroCopyGL
-  --ignore-gpu-blocklist
-  --enable-accelerated-video-decode
-  --use-gl=egl
+  # Decode de hardware: o Pi 4 so tem decoder H.264 (bcm2835-codec, /dev/video10)
+  # e o h264ify garante que o YouTube sirva H.264. NAO passe --use-gl=egl nem
+  # flags de AcceleratedVideoDecode*: no Chromium da Pi (wrapper ja usa
+  # --use-angle=gles) elas desligavam o decoder -> 1080p por software, ~220% de
+  # CPU e 15-50% de quadros perdidos. Com os padroes: ~25% de CPU, <1% perdidos.
   --noerrdialogs
   --disable-infobars
   --disable-session-crashed-bubble

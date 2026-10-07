@@ -22,9 +22,13 @@
     }
   }
 
+  // No YouTube TV, Esc/Backspace sao o "voltar" do proprio app (fechar o player,
+  // sair da busca): nao intercepta. Para sair: botao Menu (mouse) ou Super+Esc.
+  const appOwnsKeys = location.hostname === "www.youtube.com";
+
   // Setas ficam livres para a propria pagina (graficos, listas, formularios).
   // Voltar = Backspace (padrao de TV) ou Alt+Seta esquerda (nativo do Chromium).
-  document.addEventListener("keydown", (event) => {
+  if (!appOwnsKeys) document.addEventListener("keydown", (event) => {
     const target = event.target;
     const tag = target && target.tagName ? target.tagName.toLowerCase() : "";
     const editing = target && (target.isContentEditable || tag === "input" || tag === "textarea" || tag === "select");

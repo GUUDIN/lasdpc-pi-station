@@ -79,6 +79,30 @@ cat ~/.config/lasdpc/mode
 
 Para uma instalacao minima de TV do laboratorio, use apenas `desktop` + `dashboard` + menu central. `media` e `games` devem ser tratados como perfis opcionais por estacao.
 
+### YouTube
+
+Um unico tile **YouTube** abre a interface de TV do YouTube (`youtube.com/tv`) no Chromium
+kiosk (`lasdpc-youtube`, modo `youtube`). Extensoes carregadas:
+
+- `h264ify` — forca H.264, o unico codec que o Pi 4 decodifica por hardware (`/dev/video10`).
+- `ubol` — uBlock Origin Lite (MV3; o Chromium >= 139 nao carrega mais o uBO classico),
+  instalado por `lasdpc-ubol-install.sh` com versao e sha256 fixados.
+- `ytads-extension` — remove `adPlacements`/`playerAds`/`adSlots` das respostas do player
+  (tecnica do json-prune do uBO). O uBO Lite sozinho **nao** bloqueia os anuncios do
+  YouTube TV (testado no modo otimizado e no completo).
+- `escape-extension` — botao "← Menu" ao mexer o mouse. No YouTube, Esc/Backspace ficam com
+  o app (sao o "voltar" dele); para sair use `Super+Esc` ou o botao.
+
+Medido em 2026-10-07 (Chromium 154, `tools/yt-bench/ytprobe.py`, 3 videos populares):
+1080p, 0-0,6% de quadros perdidos, ~25% de CPU, nenhum anuncio (sem a extensao: anuncio de
+11-16 s em 3 de 3). **Nao** adicione `--use-gl=egl` nem flags `AcceleratedVideoDecode*`: no
+Chromium da Pi elas desligavam o decoder de hardware (1080p por software, ~220% de CPU,
+15-50% de quadros perdidos).
+
+Celular: no YouTube da TV, Configuracoes → Vincular com codigo de TV; no app, digite o codigo
+e use Transmitir. Os modos antigos `tv` (busca + mpv) e `ytcast` (receptor DIAL) continuam
+disponiveis por SSH (`lasdpc-play`, `lasdpc-mode ytcast`), mas sairam do menu.
+
 ### Navegacao
 
 - **Menu central:** mouse, setas/Tab + Enter, ou controle (direcional + A). Esc,

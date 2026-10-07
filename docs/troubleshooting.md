@@ -45,14 +45,8 @@ Foi corrigida uma corrida em `lasdpc-mode`: o script nao deve matar o app-alvo d
 
 ## Barra de traducao no dashboard
 
-O kiosk usa:
-
-```text
---disable-translate
---disable-features=Translate,TranslateUI
-```
-
-E politica:
+No Chromium >= ~140 as flags `--disable-translate`/`--disable-features=Translate,TranslateUI`
+nao escondem mais a barra; o que vale e a politica (instalada por `make launcher`):
 
 ```sh
 cat /etc/chromium/policies/managed/lasdpc-kiosk.json
