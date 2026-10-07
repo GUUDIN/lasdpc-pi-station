@@ -10,6 +10,19 @@ Configuração reproduzível de uma **Raspberry Pi 4 Model B** (laboratório LAS
 
 > Os modos (Dashboard / Media / Games / Desktop) são **mutuamente exclusivos** para que Chromium, Kodi e EmulationStation não disputem tela e áudio. A stack IoT permanece ativa em todos eles.
 
+## Instalar numa Pi nova (caminho padrão)
+
+```sh
+sudo apt-get install -y git
+sudo git clone https://github.com/GUUDIN/lasdpc-pi-station.git /opt/lasdpc-pi-station/repo
+sudo /opt/lasdpc-pi-station/repo/install.sh --nome tv-lab-02 --apps "games airplay"
+```
+
+Cada funcionalidade é um **app** (`apps/<id>/app.json`); dashboard, YouTube, Spotify e desktop
+são obrigatórios. A Pi se atualiza sozinha seguindo o canal `stable` (com rollback automático).
+Ver **[docs/fleet.md](docs/fleet.md)**. As seções abaixo descrevem a instalação antiga, por
+fases, a partir de uma máquina de controle.
+
 ## Princípios de segurança
 
 - Nada destrutivo sem inspeção prévia. **Não** formata, **não** particiona, **não** desativa SSH.
