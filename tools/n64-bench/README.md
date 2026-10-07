@@ -15,6 +15,14 @@ Ferramentas usadas para afinar o Zelda OoT (ver `docs/gaming.md`). Rodam na Pi, 
 - `area.sh NOME ENTRADA` — warp a partir de `states.forest/`, espera a cena e salva
   `states.NOME/`.
 
+- `lat.py NOME [chave=valor]` — latencia em **quadros** com o jogo pausado (comando de rede
+  do RetroArch + avanco quadro a quadro): quando o Link muda na RAM e quando a tela muda.
+  Nao enxerga filas que so existem em tempo real.
+- `rtlat.py NOME [chave=valor]` — latencia **em tempo real** (ms): segura Shift (Z-target) e
+  cronometra ate as faixas pretas aparecerem na tela composta (wf-recorder numa regiao).
+  Subtraia ~160 ms da captura (`calib.py`) e ~29 quadros (~480 ms) do proprio Z-target.
+- `calib.py` — mede o atraso fixo da captura fechando a janela num instante conhecido.
+
 Estados e capturas nao sao versionados (contem a RAM do jogo). Para comecar: crie um save
 com `play.py` + `AUTOSAVE=true` ate ter o Link controlavel e copie `states/` para
 `states.forest/`.
