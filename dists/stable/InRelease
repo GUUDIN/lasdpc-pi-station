@@ -4,34 +4,34 @@ Hash: SHA256
 Architectures: arm64 all
 Codename: stable
 Components: main
-Date: Wed, 07 Oct 2026 23:15:03 +0000
+Date: Wed, 07 Oct 2026 23:38:34 +0000
 Label: LASDPC Station
 Origin: LASDPC
 Suite: stable
 MD5Sum:
- a874cfd83dc306af88742121f80137ff             1091 main/binary-all/Packages
- e943086b4df87e37b4e0f6ab74b9ebb3              756 main/binary-all/Packages.gz
- a874cfd83dc306af88742121f80137ff             1091 main/binary-arm64/Packages
- e943086b4df87e37b4e0f6ab74b9ebb3              756 main/binary-arm64/Packages.gz
+ 9630d097e18d781fff6ee112b4e72fd8             2231 main/binary-all/Packages
+ 99808a50564f73e0a89e98461f958b20              991 main/binary-all/Packages.gz
+ 9630d097e18d781fff6ee112b4e72fd8             2231 main/binary-arm64/Packages
+ 99808a50564f73e0a89e98461f958b20              991 main/binary-arm64/Packages.gz
 SHA1:
- dbfe9b9f68799c3d599f14136b855e172f990888             1091 main/binary-all/Packages
- 34a75ae89448ccf9f6bd06c7414b6a9a9aedb374              756 main/binary-all/Packages.gz
- dbfe9b9f68799c3d599f14136b855e172f990888             1091 main/binary-arm64/Packages
- 34a75ae89448ccf9f6bd06c7414b6a9a9aedb374              756 main/binary-arm64/Packages.gz
+ c2688029188792027d622891cd91e82a6bdac34f             2231 main/binary-all/Packages
+ 73fe88daec56df835edccf768e5f93d41c27ca6f              991 main/binary-all/Packages.gz
+ c2688029188792027d622891cd91e82a6bdac34f             2231 main/binary-arm64/Packages
+ 73fe88daec56df835edccf768e5f93d41c27ca6f              991 main/binary-arm64/Packages.gz
 SHA256:
- f96c04161416999a1120f1ee2d0c57ee463359a3d8970baf5c95ab26cc9015bb             1091 main/binary-all/Packages
- 0190c579363dcd1d04100482a0903d08b5a9040a610654fefb40a8f8d35a35a5              756 main/binary-all/Packages.gz
- f96c04161416999a1120f1ee2d0c57ee463359a3d8970baf5c95ab26cc9015bb             1091 main/binary-arm64/Packages
- 0190c579363dcd1d04100482a0903d08b5a9040a610654fefb40a8f8d35a35a5              756 main/binary-arm64/Packages.gz
+ cdaf20581d8d4360b1df54e72837ccbc185afc5d050eb9ead32383c1885bc4a9             2231 main/binary-all/Packages
+ e69afe3115fd9efc19ff942de4a1f0d0e4ae3802169a91c98b3fa948c52f055a              991 main/binary-all/Packages.gz
+ cdaf20581d8d4360b1df54e72837ccbc185afc5d050eb9ead32383c1885bc4a9             2231 main/binary-arm64/Packages
+ e69afe3115fd9efc19ff942de4a1f0d0e4ae3802169a91c98b3fa948c52f055a              991 main/binary-arm64/Packages.gz
 SHA512:
- 56ee1caacdf13a95ee6397b16787b4fb6eacb372f3c77e57a23883acea365f118a5c5de40bd4bdf7a60f0d9417ec4c64f4609c262c7aa0d5f83fc3a1a26371e8             1091 main/binary-all/Packages
- d089bd905defabc22be587182b33cf04647adb48e99c6d0d4d674808e610353d04e4750a1a8a23ae97947fd7a261c0d0311386aac54988b787498023248e9490              756 main/binary-all/Packages.gz
- 56ee1caacdf13a95ee6397b16787b4fb6eacb372f3c77e57a23883acea365f118a5c5de40bd4bdf7a60f0d9417ec4c64f4609c262c7aa0d5f83fc3a1a26371e8             1091 main/binary-arm64/Packages
- d089bd905defabc22be587182b33cf04647adb48e99c6d0d4d674808e610353d04e4750a1a8a23ae97947fd7a261c0d0311386aac54988b787498023248e9490              756 main/binary-arm64/Packages.gz
+ fa8906c0d57199214513b85c4c03100cd24776cc5f0991accc83fa1b3ca2fd0f26959560899927af093eed7944c01fa4554e95a51d9ad11300876a3d0168e879             2231 main/binary-all/Packages
+ b0d55b7a5814c19ab4ff802b1536a0aed0289b51a6b1e112b221e64fe15e619972250a82225c7ac8626f38786e6313adbbf9a489fa2c23da47c6c3f40655d0c9              991 main/binary-all/Packages.gz
+ fa8906c0d57199214513b85c4c03100cd24776cc5f0991accc83fa1b3ca2fd0f26959560899927af093eed7944c01fa4554e95a51d9ad11300876a3d0168e879             2231 main/binary-arm64/Packages
+ b0d55b7a5814c19ab4ff802b1536a0aed0289b51a6b1e112b221e64fe15e619972250a82225c7ac8626f38786e6313adbbf9a489fa2c23da47c6c3f40655d0c9              991 main/binary-arm64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iIsEARYIADMWIQQIUPQyAHKmYG04NpVMGU8m3A/RAwUCasbSdxUccGVkcm9ndWRp
-bkBnbWFpbC5jb20ACgkQTBlPJtwP0QNK7QEAvZ3CDz7gQHKe0CtTFdFKuUDrJd/b
-v0uCztveIv9vJ60A/26DrVpI7iW9zw0RwWOxN07a9lNOUnaPAR6DJJ01LN8M
-=/e+Z
+iIsEARYIADMWIQQIUPQyAHKmYG04NpVMGU8m3A/RAwUCasbX+hUccGVkcm9ndWRp
+bkBnbWFpbC5jb20ACgkQTBlPJtwP0QNmYgD/Ro7wFGRTWAqdaPCxSnVtVyqhL5ze
+9ABV/ObmWX4LRFUA/2ES7IJeLAHVhCfWF3PwB9mbui5ngL3xFi0CDZ7kZ6YM
+=2qAd
 -----END PGP SIGNATURE-----
