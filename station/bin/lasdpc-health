@@ -14,7 +14,7 @@ bad(){ echo "FALHA: $*"; fail=1; }
 APPS_DIR=/opt/lasdpc-pi-station/apps
 
 ids="$(lasdpc-apps ids 2>/dev/null)" || bad "lasdpc-apps nao roda"
-for req in menu dashboard youtube spotify desktop; do
+for req in menu dashboard desktop; do
   echo "$ids" | grep -qx "$req" || bad "app obrigatorio ausente: $req"
 done
 

@@ -8,8 +8,8 @@
 #
 # Opcoes:
 #   --nome NOME       nome da estacao (padrao: hostname)
-#   --apps "A B"      apps opcionais (obrigatorios: dashboard youtube spotify desktop)
-#                     disponiveis: games airplay kodi
+#   --apps "A B"      apps opcionais (obrigatorios: dashboard desktop)
+#                     disponiveis: youtube spotify games airplay kodi
 #   --canal CANAL     stable (padrao) ou main
 #   --usuario USER    usuario da sessao grafica (padrao: o do uid 1000)
 #   --dashboard URL   painel do modo Dashboard
@@ -46,7 +46,7 @@ if [ ! -f /etc/lasdpc/station.conf ]; then
 STATION_NAME="$NAME"
 # canal de atualizacao: stable (recomendado) ou main
 CHANNEL="$CHANNEL"
-# apps opcionais habilitados (obrigatorios estao sempre ligados): games airplay kodi
+# apps opcionais habilitados (obrigatorios estao sempre ligados): youtube spotify games airplay kodi
 APPS="$APPS"
 # usuario da sessao grafica
 SESSION_USER="$USER_NAME"

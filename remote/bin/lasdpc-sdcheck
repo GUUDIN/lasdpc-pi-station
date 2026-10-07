@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-sdcheck — verificacao de cartao SD (cartoes falsificados/ruins).
+#
+#   lasdpc-sdcheck                 cartao em uso (sistema rodando nele), ~1-2 min,
+#                                  SEM apagar nada: identidade, integridade (escreve e
+#                                  confere com CRC), velocidade sequencial e 4K aleatoria
+#                                  (o que pesa no uso real), erros do controlador, espaco.
+#   lasdpc-sdcheck --destrutivo /dev/sdX
+#                                  cartao num leitor USB, ANTES de gravar o sistema
+#                                  (APAGA TUDO): f3probe acha capacidade falsa e setores
+#                                  ruins em minutos, + velocidade no dispositivo cru.
+#
+# Capacidade falsa (cartao que diz 64 GB e tem 8 GB) so e detectavel no modo
+# destrutivo: escrever alem da capacidade real corromperia o sistema em uso.
+# Saida: 0 = aprovado, 1 = lento (funciona, mas a estacao fica lenta), 2 = reprovado.
+# Referencia de velocidade: classe A1 (1500 IOPS leitura / 500 IOPS escrita 4K)
+# e Classe 10 (10 MB/s escrita sequencial).
+# ============================================================
+set -uo pipefail
+G=$'\e[32m'; Y=$'\e[33m'; R=$'\e[31m'; B=$'\e[1m'; N=$'\e[0m'
+[ -t 1 ] || { G=; Y=; R=; B=; N=; }
+verdict=0
+ok()   { echo "  ${G}✔${N} $*"; }
+slow() { echo "  ${Y}▲${N} $*"; [ $verdict -lt 1 ] && verdict=1; }
+bad()  { echo "  ${R}✖${N} $*"; verdict=2; }
+need() { command -v "$1" >/dev/null 2>&1 || { echo "instalando $2..."; sudo apt-get install -y -qq "$2" >/dev/null; }; }
+
+# Fabricantes (campo MID do registro CID do cartao). Desconhecido nao e prova de
+# falsificacao, mas e o padrao dos genericos; os testes abaixo e que decidem.
+manuf() {
+  case "$1" in
+    0x000001) echo "Panasonic" ;; 0x000002) echo "Toshiba/Kioxia" ;; 0x000003) echo "SanDisk" ;;
+    0x00001b) echo "Samsung" ;;   0x00001d) echo "ADATA" ;;          0x000027) echo "Phison (Verbatim, PNY, ...)" ;;
+    0x000028) echo "Lexar" ;;     0x000031) echo "Silicon Power" ;;  0x000041) echo "Kingston" ;;
+    0x000074) echo "Transcend" ;; 0x000076) echo "Patriot" ;;        0x000082) echo "Sony" ;;
+    0x00009c) echo "Angelbird/Hoodman" ;; *) echo "" ;;
+  esac
+}
+
+fio_json() {  # fio_json <campo> <args...>  -> numero (MB/s ou IOPS)
+  local field="$1"; shift
+  fio --output-format=json "$@" 2>/dev/null | python3 -c "
+import json,sys
+j=json.load(sys.stdin)['jobs'][0]; f='$field'
+if f=='wbw': print(round(j['write']['bw']/1024,1))
+elif f=='rbw': print(round(j['read']['bw']/1024,1))
+elif f=='wiops': print(int(j['write']['iops']))
+elif f=='riops': print(int(j['read']['iops']))
+elif f=='err': print(j.get('error',0))
+" 2>/dev/null || echo 0
+}
+ge() { python3 -c "import sys;sys.exit(0 if float('$1')>=float('$2') else 1)"; }
+
+speed_tests() {  # speed_tests <alvo> <tamanho> <min leitura 4K> <min escrita 4K> <rotulo>
+  # Dispositivo cru: regua A1 (1500/500 IOPS). Em uso, via sistema de arquivos e
+  # com a Pi ocupada, os mesmos cartoes medem ~30-40% menos: regua calibrada
+  # (um SanDisk A1 desta estacao mediu 1633/435).
+  local t="$1" size="$2" minr="$3" minw="$4" ref="$5" w r rw rr
+  local common=(--name=sd --filename="$t" --direct=1 --ioengine=psync --size="$size")
+  w=$(fio_json wbw  "${common[@]}" --rw=write --bs=1M)
+  r=$(fio_json rbw  "${common[@]}" --rw=read  --bs=1M)
+  rr=$(fio_json riops "${common[@]}" --rw=randread  --bs=4k --runtime=10 --time_based)
+  rw=$(fio_json wiops "${common[@]}" --rw=randwrite --bs=4k --runtime=10 --time_based)
+  echo "  escrita sequencial ${B}$w MB/s${N} • leitura sequencial ${B}$r MB/s${N}"
+  echo "  4K aleatorio: leitura ${B}$rr IOPS${N} • escrita ${B}$rw IOPS${N}"
+  ge "$w" 10   && ok "escrita sequencial >= 10 MB/s (Classe 10)" || slow "escrita sequencial abaixo de Classe 10 (instalar/atualizar vai demorar)"
+  ge "$rr" "$minr" && ok "leitura 4K >= $minr IOPS ($ref)" || slow "leitura 4K abaixo de $minr IOPS ($ref): menu, Chromium e jogos abrem devagar"
+  ge "$rw" "$minw" && ok "escrita 4K >= $minw IOPS ($ref)" || { ge "$rw" 60 && slow "escrita 4K abaixo de $minw IOPS ($ref): atualizacoes e saves ficam lentos" || bad "escrita 4K muito baixa ($rw IOPS): o sistema vai engasgar o tempo todo"; }
+}
+
+identity() {  # identity <bloco: mmcblk0 | sdX>
+  local d="/sys/block/$1/device" mid name date size m
+  size=$(( $(cat "/sys/block/$1/size") * 512 / 1000000000 ))
+  mid=$(cat "$d/manfid" 2>/dev/null || true); name=$(cat "$d/name" 2>/dev/null || cat "$d/model" 2>/dev/null || true)
+  date=$(cat "$d/date" 2>/dev/null || true); m=$(manuf "$mid")
+  echo "  cartao: ${B}${name:-?}${N} • ${size} GB declarados • fabricado ${date:-?} • fabricante ${mid:-?} ${m:+($m)}"
+  if [ -n "$mid" ] && [ -z "$m" ]; then
+    slow "fabricante nao reconhecido ($mid): tipico de cartao generico; confira com --destrutivo antes de usar outros iguais"
+  fi
+}
+
+# ---------------------------------------------------------------- destrutivo
+if [ "${1:-}" = "--destrutivo" ]; then
+  dev="${2:-}"
+  [ -b "$dev" ] || { echo "uso: sudo lasdpc-sdcheck --destrutivo /dev/sdX"; exit 2; }
+  [ "$(id -u)" = 0 ] || { echo "rode com sudo"; exit 2; }
+  root_disk="/dev/$(lsblk -no PKNAME "$(findmnt -no SOURCE /)")"
+  [ "$dev" = "$root_disk" ] && { echo "$dev e o cartao do sistema em uso: use sem --destrutivo"; exit 2; }
+  if lsblk -no MOUNTPOINT "$dev" | grep -q .; then echo "desmonte $dev primeiro (umount ${dev}*)"; exit 2; fi
+  need f3probe f3; need fio fio
+  echo "${B}Verificacao destrutiva de $dev${N} — TUDO no cartao sera apagado."
+  if [ "${LASDPC_SDCHECK_YES:-}" != 1 ]; then
+    read -r -p "Digite o nome do dispositivo para confirmar ($dev): " c; [ "$c" = "$dev" ] || { echo "cancelado"; exit 2; }
+  fi
+  echo "${B}1. Identidade${N}"; identity "$(basename "$dev")"
+  echo "${B}2. Capacidade real e setores (f3probe)${N}"
+  out="$(f3probe --destructive --time-ops "$dev" 2>&1)"; echo "$out" | sed -n '/^Good news\|^Bad news\|Device geometry\|Usable size\|Announced size\|Average/p' | sed 's/^/  /'
+  if echo "$out" | grep -q '^Good news'; then ok "capacidade real confere com a declarada"
+  else bad "cartao FALSO ou defeituoso (capacidade real menor que a declarada / setores ruins)"; fi
+  echo "${B}3. Velocidade (dispositivo cru)${N}"; speed_tests "$dev" 512M 1500 500 "A1"
+else
+# ---------------------------------------------------------------- em uso
+  need fio fio
+  src="$(findmnt -no SOURCE /)"; blk="$(lsblk -no PKNAME "$src")"
+  echo "${B}Verificacao do cartao em uso ($blk) — nao apaga nada${N}"
+  echo "${B}1. Identidade${N}"; identity "$blk"
+  echo "${B}2. Integridade (escreve 512 MB e confere cada bloco com CRC)${N}"
+  tmp="$(mktemp -p /var/tmp lasdpc-sdcheck.XXXXXX)"; trap 'rm -f "$tmp"' EXIT
+  err=$(fio_json err --name=verify --filename="$tmp" --direct=1 --ioengine=psync --size=512M \
+        --rw=write --bs=1M --verify=crc32c --do_verify=1 --verify_fatal=1)
+  [ "$err" = 0 ] && ok "512 MB escritos e lidos sem nenhum erro" || bad "dados voltaram DIFERENTES do que foi escrito: cartao defeituoso"
+  echo "${B}3. Velocidade (via sistema de arquivos)${N}"; speed_tests "$tmp" 256M 1000 250 "equivalente A1 em uso"
+  echo "${B}4. Erros do controlador desde o boot${N}"
+  n=$(journalctl -k -b --no-pager 2>/dev/null | grep -ciE 'mmc[0-9].*(error|timeout|crc)|I/O error.*mmcblk|EXT4-fs error' || true)
+  [ "${n:-0}" = 0 ] && ok "nenhum erro de leitura/escrita no log do kernel" || bad "$n erros de I/O do cartao no log do kernel (journalctl -k)"
+  echo "${B}5. Espaco${N}"
+  free=$(df -BG --output=avail / | tail -1 | tr -dc 0-9)
+  [ "$free" -ge 6 ] && ok "${free} GB livres" || bad "so ${free} GB livres; a estacao precisa de >= 6 GB (cartao de 16 GB ou mais)"
+fi
+
+echo
+case $verdict in
+  0) echo "${G}${B}APROVADO${N}: cartao bom para a estacao." ;;
+  1) echo "${Y}${B}LENTO${N}: funciona, mas a estacao vai ficar lenta. Prefira um cartao A1/A2 de marca." ;;
+  2) echo "${R}${B}REPROVADO${N}: nao use este cartao." ;;
+esac
+exit $verdict
