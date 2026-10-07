@@ -103,6 +103,19 @@ Celular: no YouTube da TV, Configuracoes → Vincular com codigo de TV; no app, 
 e use Transmitir. Os modos antigos `tv` (busca + mpv) e `ytcast` (receptor DIAL) continuam
 disponiveis por SSH (`lasdpc-play`, `lasdpc-mode ytcast`), mas sairam do menu.
 
+### AirPlay (espelhar iPhone/iPad/Mac)
+
+Ajustes → **Ativar AirPlay** (modo `media`): a TV mostra a tela de espera (`airplay.html`) e o
+`uxplay.service` (usuario) anuncia **TV LASDPC**. Quem espelha (Central de Controle →
+Espelhamento de Tela) abre a janela do UxPlay em tela cheia; ao desconectar, volta a espera.
+O app do YouTube no iPhone tambem pode transmitir por AirPlay (`-hls`).
+
+UxPlay **1.73.7 compilado** (`lasdpc-uxplay-build.sh`, versao/sha256 fixados) em vez do
+1.62 do Debian (2023, sem as correcoes de iOS 27 e de seguranca, ex.: CVE-2025-60458).
+H.264 pelo decoder de hardware (`-v4l2`) e saida `waylandsink`. Verificado sem aparelho
+Apple: anuncio mDNS `_airplay`/`_raop` com o IP da rede, descoberta e resposta RTSP via
+`pyatv`. O espelhamento real (criptografia/pareamento da Apple) so testa com iPhone/Mac.
+
 ### Navegacao
 
 - **Menu central:** mouse, setas/Tab + Enter, ou controle (direcional + A). Esc,

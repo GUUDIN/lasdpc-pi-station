@@ -115,10 +115,11 @@ run_app(){
     menu)      run_kiosk "$MENU_URL" "chromium-kiosk" ;;
     dashboard) run_kiosk "$DASHBOARD_URL" "chromium-kiosk" ;;
     media)
-      log "modo media receiver ativo; aguardando mudanca de modo"
-      sleep "${LASDPC_APP_READY_DELAY:-1.8}"
-      hide_loading
-      wait_until_mode_changes media ;;
+      # AirPlay: o uxplay (lasdpc-media.target) roda em segundo plano e abre a
+      # propria janela em tela cheia quando alguem espelha; enquanto isso a TV
+      # mostra a tela de espera com as instrucoes (em vez do desktop).
+      log "modo media: AirPlay ativo, tela de espera"
+      run_kiosk "http://localhost:8090/airplay.html" "chromium-kiosk" ;;
     kodi)
       # Kodi standalone (home theater). YouTube via addon + InputStream Adaptive.
       cd "$HOME"
@@ -246,9 +247,10 @@ while true; do
   fi
   t0=$(now)
   run_app "$MODE"
-  # Mídia/jogos: ao SAIR do app, volta ao menu (não relança).
+  # Apps (YouTube, jogos, Kodi, video): ao SAIR, volta ao menu (nao relanca).
+  # Musica e AirPlay (media) sao telas persistentes: se a pagina cair, relanca.
   # Só volta se o modo ainda for o mesmo (lasdpc-mode pode ter trocado).
-  if { [ "$MODE" = "media" ] || [ "$MODE" = "youtube" ] || [ "$MODE" = "games" ] || [ "$MODE" = "kodi" ] || [ "$MODE" = "tv" ]; } && [ "$(read_mode)" = "$MODE" ]; then
+  if { [ "$MODE" = "youtube" ] || [ "$MODE" = "games" ] || [ "$MODE" = "kodi" ] || [ "$MODE" = "tv" ]; } && [ "$(read_mode)" = "$MODE" ]; then
     echo menu > "$MODE_FILE"
   fi
   # app saiu (fechou ou foi morto por lasdpc-mode)

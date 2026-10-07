@@ -317,6 +317,12 @@ class H(BaseHTTPRequestHandler):
                     self._send(200, f.read(), "text/html; charset=utf-8")
             except Exception as e:
                 self._send(500, str(e), "text/plain")
+        elif self.path == "/airplay.html":
+            try:
+                with open(os.path.join(HERE, "airplay.html"), "rb") as f:
+                    self._send(200, f.read(), "text/html; charset=utf-8")
+            except Exception as e:
+                self._send(500, str(e), "text/plain")
         elif self.path == "/musica.html":
             try:
                 with open(os.path.join(HERE, "musica.html"), "rb") as f:

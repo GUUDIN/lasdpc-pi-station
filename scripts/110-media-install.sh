@@ -19,6 +19,7 @@ log "Etapa 1 — instalando perfil media em $PI_HOST"
 
 log "Enviando artefatos versionados para /tmp na Pi"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-uxplay" "$PI_USER@$PI_HOST:/tmp/lasdpc-uxplay"
+pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-uxplay-build.sh" "$PI_USER@$PI_HOST:/tmp/lasdpc-uxplay-build.sh"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-youtube" "$PI_USER@$PI_HOST:/tmp/lasdpc-youtube"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-mode" "$PI_USER@$PI_HOST:/tmp/lasdpc-mode"
 pi_rsync -a "$PROJECT_DIR/remote/bin/lasdpc-session" "$PI_USER@$PI_HOST:/tmp/lasdpc-session"
@@ -40,12 +41,10 @@ pi_ssh "set -euo pipefail
     sudo cp -a \"\$f\" \"/var/backups/lasdpc/\$(basename \"\$f\").\$(date +%Y%m%d-%H%M%S)\"
   }
 
-  if ! command -v uxplay >/dev/null 2>&1 || ! command -v avahi-browse >/dev/null 2>&1; then
-    sudo apt-get update
-    sudo apt-get install -y uxplay avahi-daemon avahi-utils curl ca-certificates
-  else
-    sudo apt-get install -y uxplay avahi-daemon avahi-utils curl ca-certificates
-  fi
+  sudo apt-get install -y avahi-daemon avahi-utils curl ca-certificates
+  # UxPlay compilado e fixado (o 1.62 do Debian e de 2023: sem as correcoes de iOS/seguranca)
+  sudo install -o root -g root -m 0755 /tmp/lasdpc-uxplay-build.sh /usr/local/bin/lasdpc-uxplay-build.sh
+  /usr/local/bin/lasdpc-uxplay-build.sh
   sudo systemctl enable --now avahi-daemon
 
   installed_version=\$(dpkg-query -W -f='\${Version}' raspotify 2>/dev/null || true)
@@ -97,8 +96,8 @@ pi_ssh "set -euo pipefail
 
   {
     echo '## Etapa 1 — media install — '\$(date -Is)
-    echo 'Ações executadas: uxplay/avahi instalados via apt; raspotify ${RASPOTIFY_VERSION} (.deb oficial, SHA256) so pelo librespot; lasdpc-spotify.service do usuario; saida HDMI; user units instaladas; lasdpc-mode/session atualizados.'
-    echo 'Pacotes/versões instalados: uxplay='\$(dpkg-query -W -f='\${Version}' uxplay 2>/dev/null || true)' raspotify='\$(dpkg-query -W -f='\${Version}' raspotify 2>/dev/null || true)
+    echo 'Ações executadas: avahi via apt; UxPlay compilado (lasdpc-uxplay-build.sh); raspotify ${RASPOTIFY_VERSION} (.deb oficial, SHA256) so pelo librespot; lasdpc-spotify.service do usuario; saida HDMI; user units instaladas; lasdpc-mode/session atualizados.'
+    echo 'Pacotes/versões instalados: '\$(/usr/local/bin/uxplay -v 2>/dev/null | head -1)' raspotify='\$(dpkg-query -W -f='\${Version}' raspotify 2>/dev/null || true)
     echo 'Arquivos criados/modificados: /usr/local/bin/lasdpc-uxplay, /usr/local/bin/lasdpc-youtube, /usr/local/bin/lasdpc-mode, /usr/local/bin/lasdpc-session, /opt/lasdpc-pi-station/launcher/{index.html,server.py}, ~/.config/systemd/user/{uxplay.service,lasdpc-media.target,lasdpc-spotify.service}'
     echo 'TCs: TC-1.1 PENDENTE; TC-1.2..TC-1.9 PENDENTES'
     echo 'Próxima etapa liberada: NÃO'

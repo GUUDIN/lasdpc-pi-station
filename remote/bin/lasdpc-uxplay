@@ -4,7 +4,7 @@ set -euo pipefail
 CONF_DIR="${HOME}/.config/lasdpc"
 ENV_FILE="$CONF_DIR/session.env"
 
-UXPLAY_NAME="TV LASDPC $(hostname)"
+UXPLAY_NAME="TV LASDPC"
 # waylandsink: nativo Wayland, funciona com labwc. Override via UXPLAY_VIDEO_SINK em session.env.
 UXPLAY_VIDEO_SINK="waylandsink"
 
@@ -13,5 +13,9 @@ if [ -f "$ENV_FILE" ]; then
   . "$ENV_FILE"
 fi
 
-# -s: solicita resolucao ao cliente; -nc: mantem janela ao desconectar
-exec uxplay -n "$UXPLAY_NAME" -nh -vs "$UXPLAY_VIDEO_SINK" -fs -s 1920x1080@60 -nc
+# UxPlay compilado (lasdpc-uxplay-build.sh), nao o 1.62 do Debian.
+#  -nh: sem "@hostname" no nome      -v4l2: H.264 pelo decoder de hardware do Pi
+#  -s: pede 1080p ao cliente         -hls: aceita o app do YouTube (link HLS)
+#  (sem -nc: ao desconectar a janela fecha e a TV volta a tela de espera)
+exec /usr/local/bin/uxplay -n "$UXPLAY_NAME" -nh -v4l2 -vs "$UXPLAY_VIDEO_SINK" -fs \
+  -s 1920x1080@60 -hls
