@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-update — atualiza esta Pi a partir do repositorio publico, seguindo o
+# canal da estacao (CHANNEL no /etc/lasdpc/station.conf; padrao: stable).
+#   1. git fetch do canal; se nao ha versao nova, termina
+#   2. troca o checkout (/opt/lasdpc-pi-station/repo), roda lasdpc-apply e
+#      lasdpc-health
+#   3. se algo falhar, volta para a versao anterior e aplica de novo (rollback)
+# Resultado em /var/lib/lasdpc/update.json. Roda pelo timer (madrugada e boot) ou
+# na mao: sudo lasdpc-update [--force]
+# ============================================================
+set -uo pipefail
+[ "$(id -u)" = 0 ] || { echo "rode como root"; exit 1; }
+exec 9>/run/lasdpc-update.lock
+flock -n 9 || { echo "outra atualizacao em andamento"; exit 0; }
+
+. /etc/lasdpc/station.conf
+CHANNEL="${CHANNEL:-stable}"
+REPO_URL="${REPO_URL:-https://github.com/GUUDIN/lasdpc-pi-station.git}"
+REPO=/opt/lasdpc-pi-station/repo
+STATE=/var/lib/lasdpc
+FORCE=0; [ "${1:-}" = "--force" ] && FORCE=1
+install -d "$STATE"
+log(){ echo "[lasdpc-update] $*"; logger -t lasdpc-update "$*" 2>/dev/null || true; }
+record(){  # record <resultado> <de> <para> <detalhe>
+  printf '{"time":"%s","channel":"%s","result":"%s","from":"%s","to":"%s","detail":"%s"}\n' \
+    "$(date -Is)" "$CHANNEL" "$1" "$2" "$3" "$(echo "$4" | tr '"\n' "' " | cut -c1-300)" > "$STATE/update.json"
+}
+
+if [ ! -d "$REPO/.git" ]; then
+  log "clonando $REPO_URL ($CHANNEL)"
+  git clone --quiet --branch "$CHANNEL" "$REPO_URL" "$REPO" || { record failed none none "clone falhou"; exit 1; }
+fi
+git -C "$REPO" fetch --quiet origin "$CHANNEL" || { log "fetch falhou (sem rede?)"; record failed "" "" "fetch falhou"; exit 1; }
+prev="$(git -C "$REPO" rev-parse HEAD)"
+target="$(git -C "$REPO" rev-parse FETCH_HEAD)"
+applied="$(cat "$STATE/applied" 2>/dev/null || true)"
+if [ "$prev" = "$target" ] && [ "$applied" = "$target" ] && [ "$FORCE" = 0 ]; then
+  log "ja esta na versao do canal $CHANNEL (${target:0:7})"; exit 0
+fi
+
+checkout(){ git -C "$REPO" reset --quiet --hard "$1" && git -C "$REPO" clean -qfdx; }
+log "atualizando ${prev:0:7} -> ${target:0:7} (canal $CHANNEL)"
+checkout "$target"
+out="$("$REPO/station/bin/lasdpc-apply" --repo "$REPO" 2>&1)"; rc=$?
+echo "$out" | tail -40
+if [ $rc = 0 ]; then
+  health="$(/usr/local/bin/lasdpc-health 2>&1)"; rc=$?
+  echo "$health"
+fi
+if [ $rc = 0 ]; then
+  log "ok: ${target:0:7}"; record ok "$prev" "$target" "$(git -C "$REPO" log -1 --format=%s)"; exit 0
+fi
+
+log "FALHOU em ${target:0:7}; voltando para ${prev:0:7}"
+checkout "$prev"
+"$REPO/station/bin/lasdpc-apply" --repo "$REPO" >/dev/null 2>&1
+record rolled_back "$prev" "$target" "$(echo "${health:-$out}" | grep -m3 -E 'FALHA|AVISO|rro' )"
+exit 1

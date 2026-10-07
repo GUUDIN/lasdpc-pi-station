@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-health — a estacao esta funcionando? (usado pelo lasdpc-update para
+# decidir se mantem uma atualizacao ou volta para a versao anterior)
+#   - registro de apps valido e com os obrigatorios
+#   - menu central respondendo (servidor local + /api/apps)
+#   - sessao grafica rodando (se houver login grafico)
+#   - check.sh de cada app habilitado, quando existir
+# Sai 0 se tudo ok; imprime o que falhou.
+# ============================================================
+set -u
+fail=0
+bad(){ echo "FALHA: $*"; fail=1; }
+APPS_DIR=/opt/lasdpc-pi-station/apps
+
+ids="$(lasdpc-apps ids 2>/dev/null)" || bad "lasdpc-apps nao roda"
+for req in menu dashboard youtube spotify desktop; do
+  echo "$ids" | grep -qx "$req" || bad "app obrigatorio ausente: $req"
+done
+
+ok=0
+for _ in $(seq 15); do
+  curl -fsS --max-time 2 http://127.0.0.1:8090/api/apps 2>/dev/null | grep -q '"apps"' && { ok=1; break; }
+  sleep 1
+done
+[ "$ok" = 1 ] || bad "menu central (lasdpc-launcher) nao responde em :8090"
+
+SESSION_UID="$(id -u "${SESSION_USER:-$(id -nu 1000)}")"
+if [ -S "/run/user/$SESSION_UID/wayland-0" ]; then
+  pgrep -f '^bash /usr/local/bin/lasdpc-session' >/dev/null || bad "lasdpc-session nao esta rodando"
+fi
+
+for id in $ids; do
+  chk="$APPS_DIR/$id/check.sh"
+  [ -x "$chk" ] || continue
+  out="$("$chk" 2>&1)" || bad "app $id: ${out:-check falhou}"
+done
+
+[ "$fail" = 0 ] && echo "ok"
+exit "$fail"

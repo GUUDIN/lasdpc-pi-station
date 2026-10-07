@@ -4,8 +4,8 @@
 # do CDN do Spotify e reinicia o servico se a versao mudou. Roda como root
 # (timer semanal lasdpc-soloist-update.timer). Os builds expiram em 90 dias e o
 # Spotify proibe redistribuir o binario: por isso ele e baixado aqui, nunca
-# versionado. Tambem (re)constroi a imagem de runtime (Debian Trixie: o binario
-# exige glibc >= 2.38 e a Pi roda Bookworm).
+# versionado. No Bookworm (glibc 2.36; o binario exige >= 2.38) tambem constroi a
+# imagem de runtime Debian Trixie.
 # ============================================================
 set -euo pipefail
 BASE=/opt/lasdpc-pi-station/soloist
@@ -13,14 +13,20 @@ URL="https://soloist-builds.spotifycdn.com/soloist_release_arm64.tar.gz"
 IMAGE=lasdpc/soloist-runtime
 mkdir -p "$BASE"
 
-if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
+# Trixie roda o binario direto; Bookworm (glibc 2.36) precisa do conteiner
+glibc="$(ldd --version | head -1 | grep -oE '[0-9]+[.][0-9]+$')"
+NATIVE=0; [ "$(printf '%s\n' 2.38 "$glibc" | sort -V | head -1)" = "2.38" ] && NATIVE=1
+if [ "$NATIVE" = 0 ] && ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   docker build -q -t "$IMAGE" "$BASE/runtime"
 fi
 
 tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
 curl --fail --location -sS -o "$tmp/soloist.tar.gz" "$URL"
 mkdir "$tmp/x" && tar -xzf "$tmp/soloist.tar.gz" -C "$tmp/x"
-ver() { docker run --rm -v "$1":/opt/soloist:ro "$IMAGE" --version 2>/dev/null | head -1; }
+ver() {
+  if [ "$NATIVE" = 1 ]; then "$1/soloist" --version 2>/dev/null | head -1
+  else docker run --rm -v "$1":/opt/soloist:ro "$IMAGE" --version 2>/dev/null | head -1; fi
+}
 new="$(ver "$tmp/x")"; [ -n "$new" ] || { echo "binario baixado nao executa"; exit 1; }
 old="$( [ -x "$BASE/bin/soloist" ] && ver "$BASE/bin" || true)"
 if [ "$new" = "$old" ]; then

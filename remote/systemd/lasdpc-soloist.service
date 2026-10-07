@@ -2,14 +2,14 @@
 Description=LASDPC Station - Spotify Connect oficial (Spotify Soloist)
 Documentation=https://developer.spotify.com/documentation/soloist
 After=docker.service network-online.target sound.target
-Requires=docker.service
 Wants=network-online.target
 # so sobe depois que a chave foi cadastrada (lasdpc-soloist-setkey)
 ConditionPathExists=/etc/lasdpc/soloist.env
 
 [Service]
 ExecStart=/usr/local/bin/lasdpc-soloist-run
-ExecStop=/usr/bin/docker stop -t 5 lasdpc-soloist
+# so no modo conteiner (Bookworm); no nativo o systemd encerra o processo
+ExecStop=-/bin/sh -c 'command -v docker >/dev/null && docker stop -t 5 lasdpc-soloist >/dev/null 2>&1 || true'
 Restart=on-failure
 RestartSec=10
 # codigo 10 = build expirado: atualiza e tenta de novo

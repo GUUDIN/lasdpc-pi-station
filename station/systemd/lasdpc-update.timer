@@ -1,0 +1,11 @@
+[Unit]
+Description=LASDPC Station - verifica atualizacoes de madrugada e apos o boot
+
+[Timer]
+OnBootSec=15min
+OnCalendar=*-*-* 04:00
+RandomizedDelaySec=45min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

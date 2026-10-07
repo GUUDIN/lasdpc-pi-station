@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-apply — deixa esta Pi igual ao repositorio (idempotente). Roda como root.
+#   1. base: sessao, menu, kiosk, tela de carregamento, labwc, politicas, dados
+#   2. cada app habilitado (obrigatorios + APPS do /etc/lasdpc/station.conf):
+#      apps/<id>/install.sh
+# Chamado pelo install.sh (cartao novo) e pelo lasdpc-update (atualizacoes).
+# Uso: lasdpc-apply [--repo DIR]   (padrao: /opt/lasdpc-pi-station/repo)
+# ============================================================
+set -euo pipefail
+REPO=/opt/lasdpc-pi-station/repo
+while [ $# -gt 0 ]; do
+  case "$1" in --repo) REPO="$(realpath "$2")"; shift 2 ;; *) echo "uso: lasdpc-apply [--repo DIR]"; exit 2 ;; esac
+done
+[ "$(id -u)" = 0 ] || { echo "rode como root"; exit 1; }
+[ -f /etc/lasdpc/station.conf ] || { echo "falta /etc/lasdpc/station.conf (rode o install.sh)"; exit 1; }
+. "$REPO/station/lib/common.sh"
+. /etc/lasdpc/station.conf
+
+# usuario da sessao grafica: SESSION_USER no station.conf, senao o uid 1000
+SESSION_USER="${SESSION_USER:-$(id -nu 1000)}"
+SESSION_UID="$(id -u "$SESSION_USER")"
+SESSION_HOME="$(getent passwd "$SESSION_USER" | cut -d: -f6)"
+OS_CODENAME="$(. /etc/os-release; echo "$VERSION_CODENAME")"
+export REPO SESSION_USER SESSION_UID SESSION_HOME OS_CODENAME
+log "aplicando $(git -C "$REPO" describe --always --dirty 2>/dev/null || echo '?') em $(hostname) ($OS_CODENAME, sessao: $SESSION_USER)"
+
+# ---------------------------------------------------------------- base
+apt_ensure chromium mpv python3 python3-pil inotify-tools git curl rsync \
+  avahi-daemon avahi-utils libnotify-bin wireplumber
+
+session_changed=0
+install_file "$REPO/remote/bin/lasdpc-session" /usr/local/bin/lasdpc-session 0755 && session_changed=1
+install_bin lasdpc-apps lasdpc-mode lasdpc-kiosk lasdpc-loading lasdpc-restart-kiosk lasdpc-status
+install_file "$REPO/station/bin/lasdpc-apply"  /usr/local/bin/lasdpc-apply  0755 || true
+install_file "$REPO/station/bin/lasdpc-update" /usr/local/bin/lasdpc-update 0755 || true
+install_file "$REPO/station/bin/lasdpc-health" /usr/local/bin/lasdpc-health 0755 || true
+
+# atualizacao automatica (canal da estacao)
+for u in lasdpc-update.service lasdpc-update.timer; do install_system_unit "$REPO/station/systemd/$u" || true; done
+systemctl daemon-reload
+systemctl enable --quiet --now lasdpc-update.timer
+
+# menu central (servidor local) + registro de apps + extensao do kiosk
+sync_dir "$REPO/remote/launcher/" "$BASE_DIR/launcher/" "$SESSION_USER:$SESSION_USER"
+sync_dir "$REPO/apps/" "$BASE_DIR/apps/"
+sync_dir "$REPO/remote/kiosk/escape-extension/" "$BASE_DIR/kiosk/escape-extension/"
+sed "s/^User=.*/User=$SESSION_USER/" "$REPO/remote/systemd/lasdpc-launcher.service" > /tmp/lasdpc-launcher.service
+if install_system_unit /tmp/lasdpc-launcher.service; then systemctl daemon-reload; fi
+systemctl enable --quiet lasdpc-launcher.service
+systemctl restart lasdpc-launcher.service
+
+# Chromium: sem barra de traducao (as flags nao valem mais no Chromium >= ~140)
+install -d /etc/chromium/policies/managed
+echo '{"TranslateEnabled": false}' > /etc/chromium/policies/managed/lasdpc-kiosk.json
+
+# labwc: atalho Super+Esc + regras de janela no rc.xml do sistema; a sessao da
+# estacao sobe pelo autostart do usuario
+if [ -f /etc/xdg/labwc/rc.xml ] && python3 "$REPO/station/lib/labwc_patch.py" /etc/xdg/labwc/rc.xml; then
+  log "labwc: rc.xml atualizado"
+fi
+LABWC_USER="$SESSION_HOME/.config/labwc"
+install -d -o "$SESSION_USER" -g "$SESSION_USER" "$LABWC_USER"
+AUTOSTART_LINE="/usr/bin/lwrespawn /usr/local/bin/lasdpc-session &"
+grep -qF "$AUTOSTART_LINE" "$LABWC_USER/autostart" 2>/dev/null \
+  || { echo "$AUTOSTART_LINE" >> "$LABWC_USER/autostart"; chown "$SESSION_USER:" "$LABWC_USER/autostart"; }
+# RetroArch/Vulkan em tela cheia falha com direct scanout (CMA fragmentada no Pi 4)
+grep -q '^WLR_SCENE_DISABLE_DIRECT_SCANOUT=1' "$LABWC_USER/environment" 2>/dev/null \
+  || { echo 'WLR_SCENE_DISABLE_DIRECT_SCANOUT=1' >> "$LABWC_USER/environment"; chown "$SESSION_USER:" "$LABWC_USER/environment"; }
+
+# login automatico no desktop (a TV liga direto na estacao)
+if command -v raspi-config >/dev/null 2>&1 && [ "${AUTOLOGIN:-yes}" = yes ]; then
+  raspi-config nonint do_boot_behaviour B4 >/dev/null 2>&1 || warn "nao consegui ligar o autologin"
+fi
+# CPU: governador padrao do sistema (ondemand); remove o "performance" fixo antigo
+if systemctl list-unit-files cpu-performance.service >/dev/null 2>&1; then
+  systemctl disable --now cpu-performance.service >/dev/null 2>&1 || true
+fi
+
+# dados da estacao (ROMs, saves): fora do repo, nunca apagados por atualizacao
+for d in "$DATA_DIR" "$DATA_DIR/roms" "$DATA_DIR/saves" "$DATA_DIR/config"; do
+  install -d -o "$SESSION_USER" -g "$SESSION_USER" "$d"
+done
+
+# ---------------------------------------------------------------- apps
+failed=()
+for id in $(LASDPC_APPS_DIR="$BASE_DIR/apps" lasdpc-apps ids); do
+  inst="$REPO/apps/$id/install.sh"
+  [ -f "$inst" ] || continue
+  log "app $id: instalando"
+  if ! ( cd "$REPO/apps/$id" && bash "$inst" ); then
+    warn "app $id: install.sh falhou"; failed+=("$id")
+  fi
+done
+
+# sessao com codigo novo: reinicia (o lwrespawn sobe de novo; a sessao nova
+# encerra os scopes da antiga e reabre o app do modo atual)
+if [ "$session_changed" = 1 ] && pkill -u "$SESSION_USER" -f '^bash /usr/local/bin/lasdpc-session'; then
+  log "sessao reiniciada (codigo novo)"
+fi
+
+install -d /var/lib/lasdpc
+git -C "$REPO" rev-parse HEAD > /var/lib/lasdpc/applied 2>/dev/null || true
+if [ ${#failed[@]} -gt 0 ]; then
+  warn "apps com falha: ${failed[*]}"; exit 3
+fi
+log "pronto"

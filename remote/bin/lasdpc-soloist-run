@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-soloist-run — ExecStart do lasdpc-soloist.service. Roda o Soloist no
-# conteiner Trixie com: rede do host (descoberta Spotify Connect), o socket do
-# PipeWire da sessao grafica (audio sai pela saida padrao = HDMI) e a API
+# lasdpc-soloist-run — ExecStart do lasdpc-soloist.service. Roda o Soloist
+# nativo (Trixie) ou num conteiner Trixie (Bookworm), com: rede do host
+# (descoberta Spotify Connect), o PipeWire da sessao grafica (audio sai pela
+# saida padrao = HDMI) e a API
 # WebSocket so em 127.0.0.1:5355 (ela nao tem autenticacao). Le a chave e o
 # usuario da sessao de /etc/lasdpc/soloist.env (criado por lasdpc-soloist-setkey).
 # ============================================================
@@ -14,12 +15,17 @@ DATA=/var/lib/lasdpc-soloist
 install -d -o "$U" -g "$G" -m 0700 "$DATA"
 # o PipeWire so existe depois do login grafico (autologin): espera ate 60 s
 for _ in $(seq 60); do [ -S "$RUN/pipewire-0" ] && break; sleep 1; done
+ARGS=(--device-name "TV LASDPC" --api-key "$SOLOIST_API_KEY" --cache-size 500
+      --initial-volume 70 --ws 127.0.0.1:5355)
+# Trixie (glibc >= 2.38): nativo. Bookworm (2.36): conteiner Debian Trixie.
+glibc="$(ldd --version | head -1 | grep -oE '[0-9]+[.][0-9]+$')"
+if [ "$(printf '%s\n' 2.38 "$glibc" | sort -V | head -1)" = "2.38" ]; then
+  exec runuser -u "$LASDPC_USER" -- env XDG_RUNTIME_DIR="$RUN" \
+    /opt/lasdpc-pi-station/soloist/bin/soloist "${ARGS[@]}" --data-dir "$DATA" --cache-dir "$DATA/cache"
+fi
 docker rm -f lasdpc-soloist >/dev/null 2>&1 || true
 exec docker run --rm --name lasdpc-soloist --network host --user "$U:$G" \
   -e XDG_RUNTIME_DIR="$RUN" \
   -v "$RUN/pipewire-0:$RUN/pipewire-0" -v "$RUN/pulse:$RUN/pulse" \
   -v /opt/lasdpc-pi-station/soloist/bin:/opt/soloist:ro -v "$DATA:/data" \
-  lasdpc/soloist-runtime \
-  --device-name "TV LASDPC" --api-key "$SOLOIST_API_KEY" \
-  --data-dir /data --cache-dir /data/cache --cache-size 500 \
-  --initial-volume 70 --ws 127.0.0.1:5355
+  lasdpc/soloist-runtime "${ARGS[@]}" --data-dir /data --cache-dir /data/cache

@@ -77,7 +77,21 @@ run_app(){
 declare -A fails
 now(){ date +%s; }
 
+# Saida de audio: HDMI (a TV), a menos que AUDIO_OUTPUT=keep no station.conf.
+# Sem isso o PipeWire pode escolher o conector de fone.
+set_hdmi_audio(){
+  load_env
+  [ "${AUDIO_OUTPUT:-hdmi}" = "hdmi" ] || return 0
+  local id
+  id="$(wpctl status 2>/dev/null | sed -n '/Sinks:/,/Sources:/p' | grep -m1 'HDMI' | grep -oE '[0-9]+[.]' | head -1 | tr -d .)"
+  [ -n "$id" ] && wpctl set-default "$id" 2>/dev/null || true
+}
+
 log "iniciado (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?})"
+# scopes de uma sessao anterior (ex.: reiniciada por atualizacao): encerra antes
+# de abrir o app do modo atual, senao ele ficaria em dobro
+systemctl --user stop 'lasdpc-app-*.scope' >/dev/null 2>&1 || true
+set_hdmi_audio
 while true; do
   MODE="$(read_mode)"
   ID="$(lasdpc-apps resolve "$MODE" 2>/dev/null || true)"
