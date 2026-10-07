@@ -1,0 +1,5 @@
+{
+  "id": "menu", "name": "Menu", "required": true, "tile": false,
+  "launch": {"type": "kiosk", "url": "http://localhost:8090", "persistent": true},
+  "loading": "Abrindo menu"
+}

@@ -1,205 +1,54 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-mode — máquina de estados de modos (mutuamente exclusivos).
-#   lasdpc-mode dashboard | menu | media | youtube | games | desktop
-# Escreve o modo e encerra APENAS os apps gerenciados pelo projeto.
-# O runner da sessão (lasdpc-session, dentro da sessão gráfica) relança o app.
-# Pode ser chamado por SSH: aqui só mexe em estado + processos (sem GUI).
+# lasdpc-mode <app> — troca o app em tela (modos mutuamente exclusivos).
+#   lasdpc-mode menu | dashboard | youtube | spotify | games | airplay | desktop | ...
+# Os modos sao os apps habilitados (lasdpc-apps ids; apelidos antigos como
+# "musica" e "media" continuam valendo). Pode ser chamado por SSH.
+# Grava o modo e encerra os OUTROS apps parando os scopes deles
+# (lasdpc-app-<id>-N.scope, criados pelo lasdpc-session); servicos declarados
+# no app.json (ex.: o receptor AirPlay) so ficam ligados no app dono deles.
 # ============================================================
 set -u
 MODE_DIR="${HOME:-/home/lasdpc}/.config/lasdpc"
 MODE_FILE="$MODE_DIR/mode"
 mkdir -p "$MODE_DIR"
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-usage(){ echo "uso: lasdpc-mode {dashboard|menu|media|kodi|tv|musica|youtube|ytcast|games|desktop}"; exit 1; }
+usage(){ echo "uso: lasdpc-mode {$(lasdpc-apps ids 2>/dev/null | paste -sd'|')}"; exit 1; }
 [ $# -eq 1 ] || usage
-NEW="$1"
-case "$NEW" in dashboard|menu|media|kodi|tv|musica|youtube|ytcast|games|desktop) ;; *) usage ;; esac
+NEW="$(lasdpc-apps resolve "$1")" || usage
+user_systemctl(){ systemctl --user "$@" >/dev/null 2>&1 || true; }
 
-user_systemctl() {
-  local runtime="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-  XDG_RUNTIME_DIR="$runtime" systemctl --user "$@" >/dev/null 2>&1 || true
-}
-
-apply_media_target() {
-  if [ "$NEW" = "media" ]; then
-    user_systemctl start lasdpc-media.target
-  else
-    user_systemctl stop lasdpc-media.target uxplay.service
-  fi
-}
-
-loading_message() {
-  # quem chama pode personalizar (ex.: menu central passa o nome do jogo)
-  [ -n "${LASDPC_LOADING_MSG:-}" ] && { echo "$LASDPC_LOADING_MSG"; return; }
-  case "$NEW" in
-    dashboard) echo "Abrindo dashboard" ;;
-    menu) echo "Abrindo menu" ;;
-    media) echo "Preparando Midia" ;;
-    kodi) echo "Abrindo Kodi" ;;
-    tv) echo "Abrindo video" ;;
-    musica) echo "Abrindo musica" ;;
-    youtube|ytcast) echo "Preparando YouTube" ;;
-    games) echo "Abrindo jogos" ;;
-    *) echo "Carregando" ;;
-  esac
-}
-
-show_loading() {
-  [ "$NEW" = "desktop" ] && return 0
-  command -v lasdpc-loading >/dev/null 2>&1 || return 0
-  XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}" \
-  WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}" \
-    lasdpc-loading "$(loading_message)" >/dev/null 2>&1 &
-  # Da tempo para a tela de loading aparecer por cima do menu antes de matar o
-  # app atual. Assim o compositor nao mostra o desktop no intervalo.
+show_loading(){
+  [ "$(lasdpc-apps get "$NEW" launch.type)" = "desktop" ] && return 0
+  local msg="${LASDPC_LOADING_MSG:-$(lasdpc-apps get "$NEW" loading)}"
+  WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}" lasdpc-loading "${msg:-Carregando}" >/dev/null 2>&1 &
+  # da tempo de o overlay cobrir a tela antes de fechar o app atual
   sleep "${LASDPC_LOADING_PREROLL:-0.8}"
 }
 
-kill_chromium_profile() {
-  local profile="$1"
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      chromium|systemd-inhibit)
-        case "$args" in
-          *"--user-data-dir="*"$profile"*) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
+# Para os scopes de todos os apps exceto o novo. O modo ja foi gravado antes:
+# o lasdpc-session so le o modo quando o app atual sai, entao o scope do app
+# novo ainda nao existe aqui (sem corrida).
+stop_other_apps(){
+  local unit
+  systemctl --user list-units --type=scope --state=running --no-legend --plain 'lasdpc-app-*' 2>/dev/null \
+    | awk '{print $1}' | while read -r unit; do
+      case "$unit" in lasdpc-app-"$NEW"-*) ;; *) user_systemctl stop "$unit" ;; esac
+    done
+}
+
+apply_services(){
+  local mine unit
+  mine=" $(lasdpc-apps get "$NEW" services) "
+  for unit in $(lasdpc-apps services); do
+    case "$mine" in *" $unit "*) user_systemctl start "$unit" ;; *) user_systemctl stop "$unit" ;; esac
   done
-}
-
-kill_loading() {
-  kill_chromium_profile "chromium-loading"
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      mpv)
-        case "$args" in
-          *"--title=LASDPC Loading"*) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
-  done
-}
-
-kill_mpv_players() {
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      mpv)
-        case "$args" in
-          *"--title=LASDPC Loading"*) ;;
-          *) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
-  done
-}
-
-kill_esde() {
-  pkill -f '/opt/es-de/ES-DE_aarch64.AppImage' 2>/dev/null || true
-  pkill -x ES-DE 2>/dev/null || true
-}
-
-kill_ares() {
-  pkill -x ares 2>/dev/null || true
-  sleep 1
-  pkill -9 -x ares 2>/dev/null || true
-}
-
-# Encerra o Kodi de forma robusta. O wrapper kodi-standalone roda kodi.bin num
-# loop (relanca ao morrer), e o kodi.bin ignora/demora no SIGTERM -> precisa
-# matar o wrapper primeiro e dar SIGKILL no binario. Sem isso o kodi.bin vira
-# orfao (PPID 1) e fica de janela de fundo, "vazando" na troca de apps.
-kill_kodi() {
-  pkill -f 'kodi-standalone' 2>/dev/null || true   # wrapper que relanca
-  pkill -x kodi.bin 2>/dev/null || true
-  pkill -x kodi 2>/dev/null || true
-  sleep 1
-  pkill -9 -x kodi.bin 2>/dev/null || true          # kodi ignora SIGTERM
-}
-
-# Encerra o receptor de cast do YouTube (node) e o mpv que ele tenha lancado.
-# Mata o receiver primeiro para ele nao relancar o mpv durante o encerramento.
-kill_ytcast() {
-  pkill -f '/opt/lasdpc-pi-station/ytcast/index.js' 2>/dev/null || true
-  pkill -x lasdpc-ytcast 2>/dev/null || true
-}
-
-# Encerra apenas apps gerenciados que nao pertencem ao novo modo.
-# O modo e gravado antes para o runner reagir rapido; por isso nao mate
-# o app-alvo aqui, ou um processo recem-lancado pode ser encerrado por corrida.
-kill_for_mode() {
-  # mpv (modo tv) e retroarch (modo games) sao encerrados ao sair do seu modo,
-  # garantindo que Super+Esc (lasdpc-mode menu) feche o app em execucao.
-  # O receptor de cast (modo ytcast) tambem controla um mpv -> mata o receiver
-  # antes do mpv ao sair, senao ele relanca o player.
-  [ "$NEW" != "ytcast" ] && kill_ytcast
-  [ "$NEW" != "tv" ] && [ "$NEW" != "ytcast" ] && kill_mpv_players
-  [ "$NEW" != "games" ] && { pkill -x retroarch 2>/dev/null || true; }
-  # O kiosk do ytcast usa profile dedicado (chromium-ytcast) para nao concorrer
-  # pelo SingletonLock do chromium-kiosk do menu/dashboard na troca de modo.
-  # Por isso ele e morto em todos os modos exceto o proprio ytcast.
-  [ "$NEW" != "ytcast" ] && kill_chromium_profile "chromium-ytcast"
-  case "$NEW" in
-    dashboard|menu|musica|ytcast)
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      kill_kodi
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-    media)
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      kill_kodi
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-    youtube)
-      kill_chromium_profile "chromium-kiosk"
-      kill_kodi
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-    games)
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      kill_kodi
-      ;;
-    kodi)
-      # nao mata o kodi (e o app-alvo); encerra os demais
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-    tv)
-      # nao mata o mpv (e o app-alvo); encerra os demais
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      kill_kodi
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-    desktop)
-      kill_chromium_profile "chromium-kiosk"
-      kill_chromium_profile "chromium-youtube-tv"
-      kill_kodi
-      pkill -x emulationstation 2>/dev/null || true
-      kill_ares
-      kill_esde
-      ;;
-  esac
 }
 
 show_loading
 echo "$NEW" > "$MODE_FILE"
-kill_for_mode
-apply_media_target
+stop_other_apps
+apply_services
 logger -t lasdpc-mode "modo alterado para: $NEW" 2>/dev/null || true
 echo "Modo: $NEW (a sessão gráfica vai aplicar em instantes)."

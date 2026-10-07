@@ -1,0 +1,6 @@
+{
+  "id": "spotify", "name": "Música", "icon": "🎵", "sub": "Spotify", "order": 30,
+  "required": true, "aliases": ["musica"],
+  "launch": {"type": "kiosk", "url": "http://localhost:8090/musica.html", "persistent": true},
+  "loading": "Abrindo música"
+}

@@ -1,0 +1,6 @@
+{
+  "id": "kodi", "name": "Kodi", "icon": "🎬", "sub": "central de mídia", "order": 50,
+  "required": false,
+  "launch": {"type": "command", "command": "kodi-standalone", "on_exit": "menu"},
+  "loading": "Abrindo Kodi"
+}

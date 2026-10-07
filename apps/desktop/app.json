@@ -1,0 +1,5 @@
+{
+  "id": "desktop", "name": "Desktop", "icon": "🖥️", "sub": "ambiente normal", "order": 90,
+  "required": true,
+  "launch": {"type": "desktop"}
+}

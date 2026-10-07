@@ -1,0 +1,111 @@
+#!/usr/bin/env python3
+"""lasdpc-apps — registro de apps da estacao (le apps/<id>/app.json + station.conf).
+
+Apps obrigatorios (required: true) estao sempre habilitados; os opcionais so se
+estiverem em APPS no /etc/lasdpc/station.conf. Usado pelo lasdpc-session,
+lasdpc-mode e pelo servidor do menu (server.py importa este arquivo).
+
+  lasdpc-apps ids                 ids habilitados (um por linha)
+  lasdpc-apps resolve <id|alias>  id canonico (ex.: musica -> spotify) ou erro
+  lasdpc-apps get <id> <campo>    valor de um campo (ex.: launch.type, loading)
+  lasdpc-apps services            units de servico de todos os apps habilitados
+  lasdpc-apps json                lista completa em JSON (para o menu)
+"""
+import json, os, shlex, sys
+
+APPS_DIR = os.environ.get("LASDPC_APPS_DIR", "/opt/lasdpc-pi-station/apps")
+STATION_CONF = os.environ.get("LASDPC_STATION_CONF", "/etc/lasdpc/station.conf")
+
+
+def station_conf():
+    """KEY="valor" (sintaxe de shell, sem executar nada)."""
+    conf = {}
+    try:
+        with open(STATION_CONF) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                k, v = line.split("=", 1)
+                parts = shlex.split(v, comments=True)
+                conf[k.strip()] = parts[0] if parts else ""
+    except FileNotFoundError:
+        pass
+    return conf
+
+
+def all_apps():
+    apps = {}
+    try:
+        names = sorted(os.listdir(APPS_DIR))
+    except FileNotFoundError:
+        return apps
+    for name in names:
+        path = os.path.join(APPS_DIR, name, "app.json")
+        try:
+            with open(path) as f:
+                app = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            continue
+        app.setdefault("id", name)
+        app.setdefault("tile", True)
+        app.setdefault("order", 100)
+        app["dir"] = os.path.join(APPS_DIR, name)
+        apps[app["id"]] = app
+    return apps
+
+
+def enabled_apps():
+    optional = set(station_conf().get("APPS", "").split())
+    return {i: a for i, a in all_apps().items() if a.get("required") or i in optional}
+
+
+def resolve(name):
+    apps = enabled_apps()
+    if name in apps:
+        return name
+    for i, a in apps.items():
+        if name in a.get("aliases", []):
+            return i
+    return None
+
+
+def get(app, dotted):
+    cur = app
+    for part in dotted.split("."):
+        if not isinstance(cur, dict) or part not in cur:
+            return ""
+        cur = cur[part]
+    if isinstance(cur, bool):
+        return "true" if cur else "false"
+    if isinstance(cur, list):
+        return " ".join(map(str, cur))
+    return str(cur)
+
+
+def main(argv):
+    if len(argv) < 2:
+        print(__doc__.strip()); return 1
+    cmd = argv[1]
+    if cmd == "ids":
+        print("\n".join(enabled_apps())); return 0
+    if cmd == "resolve" and len(argv) == 3:
+        r = resolve(argv[2])
+        if not r:
+            print(f"app desconhecido ou desabilitado: {argv[2]}", file=sys.stderr); return 2
+        print(r); return 0
+    if cmd == "get" and len(argv) == 4:
+        app = enabled_apps().get(argv[2])
+        if app is None:
+            return 2
+        print(get(app, argv[3])); return 0
+    if cmd == "services":
+        units = sorted({u for a in enabled_apps().values() for u in a.get("services", [])})
+        print("\n".join(units)); return 0
+    if cmd == "json":
+        print(json.dumps(sorted(enabled_apps().values(), key=lambda a: a["order"]), ensure_ascii=False)); return 0
+    print(__doc__.strip()); return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

@@ -1,0 +1,6 @@
+{
+  "id": "games", "name": "Jogo", "icon": "🎮", "sub": "Zelda • N64", "order": 40,
+  "required": false, "panel": "games",
+  "launch": {"type": "command", "command": "lasdpc-games-launch", "on_exit": "menu", "manages_loading": true},
+  "loading": "Abrindo jogos"
+}

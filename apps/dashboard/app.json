@@ -1,0 +1,6 @@
+{
+  "id": "dashboard", "name": "Dashboard", "icon": "📊", "sub": "painéis IoT", "order": 10,
+  "required": true,
+  "launch": {"type": "kiosk", "url": "@dashboard", "persistent": true},
+  "loading": "Abrindo dashboard"
+}

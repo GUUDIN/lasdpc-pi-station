@@ -1,0 +1,6 @@
+{
+  "id": "youtube", "name": "YouTube", "icon": "📺", "sub": "sem anúncios • celular", "order": 20,
+  "required": true,
+  "launch": {"type": "command", "command": "lasdpc-youtube", "on_exit": "menu"},
+  "loading": "Preparando YouTube"
+}

@@ -105,13 +105,8 @@
 
 <main id="home">
   <!-- funções principais -->
-  <section class="apps" aria-label="Aplicativos">
-    <button class="tile" data-action="mode/dashboard"><span class="ico">📊</span><span class="lbl">Dashboard</span><span class="sub">painéis IoT</span></button>
-    <button class="tile" data-action="mode/youtube"><span class="ico">📺</span><span class="lbl">YouTube</span><span class="sub">sem anúncios • celular</span></button>
-    <button class="tile" data-action="mode/musica"><span class="ico">🎵</span><span class="lbl">Música</span><span class="sub">Spotify</span></button>
-    <button class="tile" data-action="ui/games"><span class="ico">🎮</span><span class="lbl">Jogo</span><span class="sub">Zelda • N64</span></button>
-    <button class="tile" data-action="mode/desktop"><span class="ico">🖥️</span><span class="lbl">Desktop</span><span class="sub">ambiente normal</span></button>
-  </section>
+  <!-- tiles gerados a partir dos apps habilitados na estacao (/api/apps) -->
+  <section class="apps" id="appTiles" aria-label="Aplicativos"></section>
 
   <!-- sistema / configuração (secundário) -->
   <section class="sysbar" aria-label="Sistema">
@@ -147,9 +142,8 @@
     <input id="dashUrl" name="url" placeholder="http://servidor:porta/" autocomplete="off" aria-label="URL do dashboard">
     <button class="btn primary" type="submit">Adicionar</button>
   </form>
-  <div class="sec-title">Espelhar tela (AirPlay)</div>
-  <p style="color:var(--muted);margin:0 0 10px">Espelhe iPhone/iPad/Mac na TV. Ative e selecione <b>TV LASDPC</b> em Espelhamento de Tela.</p>
-  <button class="btn big" data-action="mode/media">📡 Ativar AirPlay</button>
+  <!-- apps sem tile (ex.: AirPlay) aparecem aqui como botoes -->
+  <div id="appButtons"></div>
 </section>
 
 <!-- PAINEL: Energia -->
@@ -384,7 +378,28 @@ async function refresh(){
   }catch(e){}
 }
 refresh(); setInterval(refresh,5000);
-focusEl(focusables(home)[0]);
+// ---------- Apps (registro da estacao) ----------
+async function loadApps(){
+  let apps=[];
+  try{ apps=(await (await fetch('/api/apps',{cache:'no-store'})).json()).apps||[]; }catch(e){}
+  const tiles=$('#appTiles'); tiles.innerHTML='';
+  for(const a of apps.filter(a=>a.tile)){
+    const b=document.createElement('button'); b.className='tile';
+    b.dataset.action=a.panel?('ui/'+a.panel):('mode/'+a.id);
+    b.innerHTML='<span class="ico"></span><span class="lbl"></span><span class="sub"></span>';
+    b.querySelector('.ico').textContent=a.icon||'▪'; b.querySelector('.lbl').textContent=a.name; b.querySelector('.sub').textContent=a.sub||'';
+    tiles.append(b);
+  }
+  const box=$('#appButtons'); box.innerHTML='';
+  for(const a of apps.filter(a=>a.settings_button)){
+    const t=document.createElement('div'); t.className='sec-title'; t.textContent=a.name;
+    const p=document.createElement('p'); p.style.cssText='color:var(--muted);margin:0 0 10px'; p.textContent=a.sub||'';
+    const b=document.createElement('button'); b.className='btn big'; b.dataset.action='mode/'+a.id; b.textContent=a.settings_button;
+    box.append(t,p,b);
+  }
+  focusEl(focusables(home)[0]);
+}
+loadApps();
 </script>
 </body>
 </html>

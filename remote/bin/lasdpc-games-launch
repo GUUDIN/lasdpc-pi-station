@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-games-launch — comando do app "games" (apps/games/app.json).
+# Jogo escolhido no menu central: ~/.config/lasdpc/game_request (linha 1 core,
+# linha 2 ROM), consumido uma vez; sem ele abre o menu do RetroArch.
+# O lasdpc-retroarch cuida da tela de carregamento (manages_loading).
+# ============================================================
+set -u
+REQ="${HOME}/.config/lasdpc/game_request"
+CORE=""; ROM=""
+if [ -f "$REQ" ]; then
+  { read -r CORE; read -r ROM; } < "$REQ"
+  rm -f "$REQ"
+fi
+if [ -n "$CORE" ] && [ -n "$ROM" ]; then
+  exec lasdpc-retroarch "$CORE" "$ROM"
+fi
+exec lasdpc-retroarch

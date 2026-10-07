@@ -10,7 +10,17 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BIND = ("127.0.0.1", 8090)
-MODES = {"dashboard", "menu", "media", "kodi", "tv", "musica", "youtube", "ytcast", "games", "desktop"}
+
+def apps_list():
+    """Apps habilitados na estacao (registro: lasdpc-apps, apps/<id>/app.json)."""
+    try:
+        return json.loads(subprocess.run(["lasdpc-apps", "json"], capture_output=True, text=True, timeout=5).stdout)
+    except Exception:
+        return []
+
+def resolve_mode(name):
+    r = subprocess.run(["lasdpc-apps", "resolve", name], capture_output=True, text=True, timeout=5)
+    return r.stdout.strip() if r.returncode == 0 else None
 YTDLP = "/usr/local/bin/yt-dlp"
 # Atalhos fixos do modo TV/Esportes. URL de CANAL oficial (.../@handle/live) pega
 # a live ativa do canal certo — bem mais confiavel que busca por texto, que
@@ -360,6 +370,10 @@ class H(BaseHTTPRequestHandler):
             self._send(200, json.dumps(dashboards_load(), ensure_ascii=False))
         elif self.path == "/api/tv/channels":
             self._send(200, json.dumps({"channels": TV_CHANNELS}, ensure_ascii=False))
+        elif self.path == "/api/apps":
+            keep = ("id", "name", "icon", "sub", "order", "tile", "panel", "settings_button")
+            apps = [{k: a[k] for k in keep if k in a} for a in apps_list()]
+            self._send(200, json.dumps({"apps": apps}, ensure_ascii=False))
         elif self.path == "/api/games":
             games = [{"id": g["id"], "label": g["label"], "system": g["system"], "thumb": bool(g["thumb"])}
                      for g in games_list()]
@@ -378,8 +392,8 @@ class H(BaseHTTPRequestHandler):
     def do_POST(self):
         p = self.path
         if p.startswith("/api/mode/"):
-            m = p.rsplit("/", 1)[-1]
-            if m in MODES:
+            m = resolve_mode(p.rsplit("/", 1)[-1])
+            if m:
                 if m == "games":  # sem jogo escolhido: abre o menu do RetroArch
                     try: os.remove(os.path.join(CONF_DIR, "game_request"))
                     except FileNotFoundError: pass

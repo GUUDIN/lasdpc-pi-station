@@ -1,0 +1,7 @@
+{
+  "id": "airplay", "name": "AirPlay", "icon": "📡", "sub": "espelhar iPhone/Mac", "order": 60,
+  "required": false, "tile": false, "settings_button": "📡 Ativar AirPlay", "aliases": ["media"],
+  "services": ["lasdpc-media.target"],
+  "launch": {"type": "kiosk", "url": "http://localhost:8090/airplay.html", "persistent": true},
+  "loading": "Preparando AirPlay"
+}

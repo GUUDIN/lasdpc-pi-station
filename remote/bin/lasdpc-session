@@ -1,99 +1,32 @@
 #!/usr/bin/env bash
 # ============================================================
-# lasdpc-session — runner da sessão gráfica (lançado pelo autostart do labwc).
-# Lê o modo atual e mantém o app correspondente rodando, com backoff/limite.
-# Modos: menu | dashboard | media | youtube | games | desktop
-# Roda DENTRO da sessão Wayland (labwc), então tem WAYLAND_DISPLAY/XDG_RUNTIME_DIR.
+# lasdpc-session — runner da sessao grafica (autostart do labwc).
+# Le o modo atual (= id de um app, ver apps/<id>/app.json e lasdpc-apps) e mantem
+# o app correspondente rodando, com backoff contra crash-loop.
+# Cada app roda num scope do systemd --user (lasdpc-app-<id>-N.scope): o
+# lasdpc-mode encerra o app parando o scope, o que mata TODOS os processos dele
+# (Chromium e filhos, kodi.bin orfao, mpv...), sem tabela de pkill por app.
+# Roda DENTRO da sessao Wayland (labwc): tem WAYLAND_DISPLAY/XDG_RUNTIME_DIR.
 # ============================================================
 set -u
 CONF_DIR="${HOME}/.config/lasdpc"
 MODE_FILE="$CONF_DIR/mode"
-ENV_FILE="$CONF_DIR/session.env"   # define DASHBOARD_URL, MENU_URL
+ENV_FILE="$CONF_DIR/session.env"   # DASHBOARD_URL escolhido em Ajustes
 mkdir -p "$CONF_DIR"
 [ -f "$MODE_FILE" ] || echo "menu" > "$MODE_FILE"
 
-# Defaults (sobrescritos por session.env)
-DASHBOARD_URL="http://localhost:8080"     # homepage local por padrão
-MENU_URL="http://localhost:8090"
 load_env(){
   DASHBOARD_URL="http://localhost:8080"
-  MENU_URL="http://localhost:8090"
+  [ -f /etc/lasdpc/station.conf ] && . /etc/lasdpc/station.conf
   [ -f "$ENV_FILE" ] && . "$ENV_FILE"
 }
-load_env
-
 log(){ logger -t lasdpc-session "$*" 2>/dev/null; echo "[lasdpc-session] $*"; }
-
 read_mode(){ tr -d '[:space:]' < "$MODE_FILE" 2>/dev/null || echo menu; }
+app(){ lasdpc-apps get "$1" "$2" 2>/dev/null; }
 
-kill_chromium_profile() {
-  local profile="$1"
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      chromium|systemd-inhibit)
-        case "$args" in
-          *"--user-data-dir="*"$profile"*) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
-  done
-}
+hide_loading(){ lasdpc-loading --hide 2>/dev/null || true; }
 
-kill_ytcast_receiver() {
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      node)
-        case "$args" in
-          *"/opt/lasdpc-pi-station/ytcast/index.js"*) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
-  done
-}
-
-hide_loading() {
-  kill_chromium_profile "chromium-loading"
-  ps -u "$(id -u)" -o pid=,comm=,args= | while read -r pid comm args; do
-    case "$comm" in
-      mpv)
-        case "$args" in
-          *"--title=LASDPC Loading"*) kill "$pid" 2>/dev/null || true ;;
-        esac
-        ;;
-    esac
-  done
-  LOADING_ACTIVE=0
-}
-
-show_loading_once() {
-  local msg="${1:-Carregando}"
-  if [ "${LOADING_ACTIVE:-0}" != "1" ]; then
-    kill_chromium_profile "chromium-loading"
-    lasdpc-loading "$msg" >/dev/null 2>&1 &
-    LOADING_ACTIVE=1
-  fi
-}
-
-run_kiosk() {
-  local url="$1"
-  local profile="${2:-chromium-kiosk}"
-  LASDPC_KIOSK_PROFILE="$profile" lasdpc-kiosk "$url" &
-  local app_pid=$!
-  sleep "${LASDPC_APP_READY_DELAY:-1.8}"
-  hide_loading
-  wait "$app_pid"
-}
-
-wait_app_ready() {
-  local app_pid="$1"
-  sleep "${LASDPC_APP_READY_DELAY:-1.8}"
-  hide_loading
-  wait "$app_pid"
-}
-
-# Bloqueia ate o modo deixar de ser "$1". Usa inotify para reagir na hora
-# (lasdpc-mode escreve o arquivo); cai para polling curto se faltar inotify.
-# Timeout de 5s como rede de seguranca caso um evento se perca.
+# Bloqueia ate o modo deixar de ser "$1" (inotify; polling curto de reserva).
 wait_until_mode_changes(){
   local from="$1"
   while [ "$(read_mode)" = "$from" ]; do
@@ -105,165 +38,78 @@ wait_until_mode_changes(){
   done
 }
 
-# backoff contra crash-loop
+# Roda "$@" no scope lasdpc-app-<id>-<n>. TimeoutStopSec=3: quem ignora o
+# SIGTERM (ex.: kodi.bin) leva SIGKILL em 3 s ao trocar de modo. O numero vem
+# do chamador (o run_scoped roda em segundo plano, num subshell).
+run_scoped(){
+  local unit="$1"; shift
+  systemd-run --user --scope --quiet --collect -p TimeoutStopSec=3 --unit="$unit" -- "$@"
+}
+
+SEQ=0
+run_app(){
+  local id="$1" type url cmd unit
+  SEQ=$((SEQ + 1)); unit="lasdpc-app-${id}-${SEQ}"
+  type="$(app "$id" launch.type)"
+  case "$type" in
+    kiosk)
+      url="$(app "$id" launch.url)"
+      [ "$url" = "@dashboard" ] && url="$DASHBOARD_URL"
+      run_scoped "$unit" env LASDPC_KIOSK_PROFILE=chromium-kiosk lasdpc-kiosk "$url" &
+      ;;
+    command)
+      cmd="$(app "$id" launch.command)"
+      # shellcheck disable=SC2086
+      run_scoped "$unit" $cmd &
+      ;;
+    *)
+      log "app '$id' sem launch valido; voltando ao menu"; echo menu > "$MODE_FILE"; return
+      ;;
+  esac
+  local pid=$!
+  # o proprio app tira o loading quando estiver pronto (ex.: lasdpc-retroarch)
+  if [ "$(app "$id" launch.manages_loading)" != "true" ]; then
+    sleep "${LASDPC_APP_READY_DELAY:-1.8}"; hide_loading
+  fi
+  wait "$pid"
+}
+
 declare -A fails
 now(){ date +%s; }
-
-run_app(){
-  local mode="$1"
-  case "$mode" in
-    menu)      run_kiosk "$MENU_URL" "chromium-kiosk" ;;
-    dashboard) run_kiosk "$DASHBOARD_URL" "chromium-kiosk" ;;
-    media)
-      # AirPlay: o uxplay (lasdpc-media.target) roda em segundo plano e abre a
-      # propria janela em tela cheia quando alguem espelha; enquanto isso a TV
-      # mostra a tela de espera com as instrucoes (em vez do desktop).
-      log "modo media: AirPlay ativo, tela de espera"
-      run_kiosk "http://localhost:8090/airplay.html" "chromium-kiosk" ;;
-    kodi)
-      # Kodi standalone (home theater). YouTube via addon + InputStream Adaptive.
-      cd "$HOME"
-      (kodi-standalone 2>/dev/null || kodi) &
-      wait_app_ready "$!" ;;
-    tv)
-      # TV/Esportes: toca a URL escolhida (atalho/busca) via mpv + yt-dlp,
-      # H.264 com decode por hardware. Sem URL, volta ao menu.
-      url="$(cat "$CONF_DIR/play_url" 2>/dev/null)"
-      if [ -n "$url" ]; then
-        lasdpc-mpv "$url" &
-        wait_app_ready "$!"
-      else
-        log "modo tv sem URL"; echo menu > "$MODE_FILE"
-      fi ;;
-    musica)
-      # Tela de espera do Spotify Connect (raspotify roda sempre em background;
-      # o audio sai direto pelo HDMI). Persistente como o dashboard.
-      run_kiosk "http://localhost:8090/musica.html" "chromium-kiosk" ;;
-    ytcast)
-      # YouTube pelo celular (cast Lounge/DIAL): o receptor (node) roda em
-      # background com o WAYLAND desta sessao e, ao receber um video, lanca o
-      # mpv (decode por HW). A tela ociosa fica ativa so enquanto nao ha video:
-      # quando o mpv comeca, o receiver escreve ytcast_state=playing e matamos o
-      # Chromium para ele nao roubar CPU/GPU por tras do video.
-      kill_chromium_profile "chromium-ytcast"
-      kill_ytcast_receiver
-      lasdpc-ytcast &
-      YTCAST_PID=$!
-      YTCAST_STATE="$CONF_DIR/ytcast_state"
-      IDLE_PID=""
-      while [ "$(read_mode)" = "ytcast" ]; do
-        if [ -z "${YTCAST_PID:-}" ] || ! kill -0 "$YTCAST_PID" 2>/dev/null; then
-          log "ytcast receiver saiu; relancando"
-          lasdpc-ytcast &
-          YTCAST_PID=$!
-        fi
-        state="$(cat "$YTCAST_STATE" 2>/dev/null || true)"
-        case "$state" in
-          playing)
-            hide_loading
-            if [ -n "$IDLE_PID" ]; then
-              kill "$IDLE_PID" 2>/dev/null || true
-              IDLE_PID=""
-            fi
-            kill_chromium_profile "chromium-ytcast"
-            ;;
-          loading)
-            show_loading_once "Carregando video"
-            if [ -n "$IDLE_PID" ]; then
-              kill "$IDLE_PID" 2>/dev/null || true
-              IDLE_PID=""
-            fi
-            kill_chromium_profile "chromium-ytcast"
-            ;;
-          *)
-            hide_loading
-            if [ -z "$IDLE_PID" ] || ! kill -0 "$IDLE_PID" 2>/dev/null; then
-              LASDPC_KIOSK_PROFILE=chromium-ytcast lasdpc-kiosk "http://localhost:8090/ytcast.html" &
-              IDLE_PID=$!
-            fi
-            ;;
-        esac
-        sleep 0.5
-      done
-      [ -n "$IDLE_PID" ] && kill "$IDLE_PID" 2>/dev/null || true
-      hide_loading
-      kill_chromium_profile "chromium-ytcast"
-      kill "$YTCAST_PID" 2>/dev/null || true
-      kill_ytcast_receiver
-      pkill -x mpv 2>/dev/null || true ;;
-    youtube)
-      lasdpc-youtube &
-      wait_app_ready "$!" ;;
-    games)
-      # RetroArch e o frontend padrao: usa Vulkan (GPU V3D real do Pi4) + Ozone,
-      # cobrindo N64 (parallel-rdp) e os sistemas leves. ares/ES-DE ficam como
-      # fallback opt-in (ambos exigem OpenGL desktop e sofrem no Pi4 — ver
-      # docs/gaming.md). Override: LASDPC_GAMES_FRONTEND=ares|esde.
-      FRONTEND="${LASDPC_GAMES_FRONTEND:-retroarch}"
-      if [ "$FRONTEND" = "retroarch" ] && command -v retroarch >/dev/null 2>&1; then
-        # Jogo escolhido no menu central: game_request = linha 1 core, linha 2 ROM.
-        # Consumido uma vez; sem ele abre o menu do RetroArch. O proprio
-        # lasdpc-retroarch tira o loading quando o RetroArch fica pronto.
-        GAME_CORE=""; GAME_ROM=""
-        if [ -f "$CONF_DIR/game_request" ]; then
-          { read -r GAME_CORE; read -r GAME_ROM; } < "$CONF_DIR/game_request"
-          rm -f "$CONF_DIR/game_request"
-        fi
-        if [ -n "$GAME_CORE" ] && [ -n "$GAME_ROM" ]; then
-          lasdpc-retroarch "$GAME_CORE" "$GAME_ROM"
-        else
-          lasdpc-retroarch
-        fi
-        LOADING_ACTIVE=0
-      elif [ "$FRONTEND" = "esde" ] && [ -x /opt/es-de/ES-DE_aarch64.AppImage ] && command -v lasdpc-esde >/dev/null 2>&1; then
-        lasdpc-esde &
-        wait_app_ready "$!"
-      elif command -v ares >/dev/null 2>&1; then
-        cd /srv/lasdpc-pi-station/roms 2>/dev/null || cd "$HOME"
-        GDK_BACKEND=wayland MESA_GL_VERSION_OVERRIDE=3.3 MESA_GLSL_VERSION_OVERRIDE=330 ares &
-        wait_app_ready "$!"
-      elif command -v emulationstation >/dev/null 2>&1; then
-        emulationstation &
-        wait_app_ready "$!"
-      else
-        log "Nenhum emulador instalado; voltando ao menu"; echo menu > "$MODE_FILE"
-      fi ;;
-    desktop)   return 0 ;;   # nada: desktop normal visível
-    *)         echo menu > "$MODE_FILE" ;;
-  esac
-}
 
 log "iniciado (WAYLAND_DISPLAY=${WAYLAND_DISPLAY:-?})"
 while true; do
   MODE="$(read_mode)"
+  ID="$(lasdpc-apps resolve "$MODE" 2>/dev/null || true)"
+  if [ -z "$ID" ]; then
+    log "modo '$MODE' nao e um app habilitado; voltando ao menu"
+    echo menu > "$MODE_FILE"; sleep 1; continue
+  fi
   load_env
-  if [ "$MODE" = "desktop" ]; then
+  if [ "$(app "$ID" launch.type)" = "desktop" ]; then
     hide_loading
-    notify-send -t 5000 -i dialog-information \
-      "LASDPC — Modo Desktop" \
+    notify-send -t 5000 -i dialog-information "LASDPC — Modo Desktop" \
       "Super+Esc → menu central\nBotão direito no desktop → opções" 2>/dev/null || true
-    wait_until_mode_changes desktop
+    wait_until_mode_changes "$MODE"
     continue
   fi
   t0=$(now)
-  run_app "$MODE"
-  # Apps (YouTube, jogos, Kodi, video): ao SAIR, volta ao menu (nao relanca).
-  # Musica e AirPlay (media) sao telas persistentes: se a pagina cair, relanca.
-  # Só volta se o modo ainda for o mesmo (lasdpc-mode pode ter trocado).
-  if { [ "$MODE" = "youtube" ] || [ "$MODE" = "games" ] || [ "$MODE" = "kodi" ] || [ "$MODE" = "tv" ]; } && [ "$(read_mode)" = "$MODE" ]; then
+  run_app "$ID"
+  # App saiu sozinho (fechou/caiu) e o modo nao mudou: "on_exit: menu" volta ao
+  # menu; os demais (persistent: telas como Musica/AirPlay/Dashboard) relancam.
+  if [ "$(read_mode)" = "$MODE" ] && [ "$(app "$ID" launch.on_exit)" = "menu" ]; then
     echo menu > "$MODE_FILE"
   fi
-  # app saiu (fechou ou foi morto por lasdpc-mode)
   dt=$(( $(now) - t0 ))
   if [ "$dt" -lt 5 ]; then
-    fails[$MODE]=$(( ${fails[$MODE]:-0} + 1 ))
-    if [ "${fails[$MODE]}" -ge 5 ]; then
-      log "modo $MODE falhou ${fails[$MODE]}x rápido — caindo para o menu (backoff)"
-      echo menu > "$MODE_FILE"; fails[$MODE]=0; sleep 3
+    fails[$ID]=$(( ${fails[$ID]:-0} + 1 ))
+    if [ "${fails[$ID]}" -ge 5 ]; then
+      log "app $ID falhou ${fails[$ID]}x rapido — caindo para o menu (backoff)"
+      echo menu > "$MODE_FILE"; fails[$ID]=0; sleep 3
     else
       sleep 2
     fi
   else
-    fails[$MODE]=0
+    fails[$ID]=0
   fi
 done
