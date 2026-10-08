@@ -28,6 +28,7 @@ cd "$SITE"
 install -d pool/main dists/stable/main/binary-arm64 dists/stable/main/binary-all
 cp "$DEB" pool/main/
 cp "$DEB" lasdpc-station.deb
+cp "$DEB" lasdpc.deb            # link curto da linha de instalacao
 cp "$ROOT/packaging/lasdpc-archive-keyring.gpg" lasdpc-archive-keyring.gpg
 for arch in arm64 all; do
   apt-ftparchive packages pool > "dists/stable/main/binary-$arch/Packages"
@@ -49,8 +50,7 @@ cat > index.html <<'HTML'
 <body style="font-family:system-ui;max-width:760px;margin:40px auto;line-height:1.5">
 <h1>LASDPC Station</h1>
 <p>Instalar numa Raspberry Pi (Raspberry Pi OS 64-bit):</p>
-<pre>curl -fsSLo /tmp/lasdpc-station.deb https://guudin.github.io/lasdpc-pi-station/lasdpc-station.deb
-sudo apt install /tmp/lasdpc-station.deb</pre>
+<pre>wget -qO /tmp/lasdpc.deb https://guudin.github.io/lasdpc-pi-station/lasdpc.deb &amp;&amp; sudo apt install /tmp/lasdpc.deb</pre>
 <p>O instalador verifica o cartão SD e pergunta quais apps instalar. Depois, o pacote se atualiza
 pelo apt e a estação pelo canal <code>stable</code> do repositório.</p>
 <p><a href="https://github.com/GUUDIN/lasdpc-pi-station">Código no GitHub</a> ·

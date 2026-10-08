@@ -16,8 +16,7 @@ GitHub (main) --promover--> GitHub (stable) <--lasdpc-update (04:00 e boot)-- ca
 Grave o Raspberry Pi OS (64-bit, Trixie) com o Raspberry Pi Imager e, na Pi:
 
 ```sh
-curl -fsSLo /tmp/lasdpc-station.deb https://guudin.github.io/lasdpc-pi-station/lasdpc-station.deb
-sudo apt install /tmp/lasdpc-station.deb
+wget -qO /tmp/lasdpc.deb https://guudin.github.io/lasdpc-pi-station/lasdpc.deb && sudo apt install /tmp/lasdpc.deb
 ```
 
 O instalador (telas do debconf/whiptail) verifica o cartão SD, pergunta o nome da estação,

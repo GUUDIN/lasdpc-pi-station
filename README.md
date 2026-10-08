@@ -12,11 +12,15 @@ Configuração reproduzível de uma **Raspberry Pi 4 Model B** (laboratório LAS
 
 ## Instalar numa Pi nova (caminho padrão)
 
+Grave o Raspberry Pi OS (64-bit) com o Raspberry Pi Imager (ou pela instalação pela rede da
+própria Pi) e, no terminal dela, uma linha:
+
 ```sh
-sudo apt-get install -y git
-sudo git clone https://github.com/GUUDIN/lasdpc-pi-station.git /opt/lasdpc-pi-station/repo
-sudo /opt/lasdpc-pi-station/repo/install.sh --nome tv-lab-02 --apps "games airplay"
+wget -qO /tmp/lasdpc.deb https://guudin.github.io/lasdpc-pi-station/lasdpc.deb && sudo apt install /tmp/lasdpc.deb
 ```
+
+O instalador verifica o cartão SD e pergunta (em telas) o nome, os apps, a chave do Spotify e o
+canal; depois instala tudo sozinho e a Pi passa a se atualizar pela rede.
 
 Cada funcionalidade é um **app** (`apps/<id>/app.json`); dashboard, YouTube, Spotify e desktop
 são obrigatórios. A Pi se atualiza sozinha seguindo o canal `stable` (com rollback automático).
