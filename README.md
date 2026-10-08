@@ -16,7 +16,7 @@ Grave o Raspberry Pi OS (64-bit) com o Raspberry Pi Imager (ou pela instalação
 própria Pi) e, no terminal dela, uma linha:
 
 ```sh
-wget -qO /tmp/lasdpc.deb https://guudin.github.io/lasdpc-pi-station/lasdpc.deb && sudo apt install /tmp/lasdpc.deb
+wget -q -N -P /tmp https://guudin.github.io/lasdpc-pi-station/lasdpc.deb && sudo apt install /tmp/lasdpc.deb
 ```
 
 O instalador verifica o cartão SD e pergunta (em telas) o nome, os apps, a chave do Spotify e o
