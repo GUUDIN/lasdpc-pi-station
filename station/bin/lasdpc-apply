@@ -33,6 +33,8 @@ session_changed=0
 install_file "$REPO/remote/bin/lasdpc-session" /usr/local/bin/lasdpc-session 0755 && session_changed=1
 install_bin lasdpc-apps lasdpc-mode lasdpc-kiosk lasdpc-loading lasdpc-restart-kiosk lasdpc-status \
   lasdpc-soloist-key lasdpc-sdcheck
+# cria o pen drive provisionador (link: usa provision.sh do mesmo checkout)
+ln -sfn "$REPO/provisioner/lasdpc-make-provisioner" /usr/local/bin/lasdpc-make-provisioner
 
 # o menu (servidor do usuario da sessao) usa sudo so para estes comandos
 cat > /tmp/lasdpc-sudoers <<SUDO

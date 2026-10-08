@@ -36,6 +36,37 @@ velocidade sequencial e 4K, erros do controlador e espaço. **Capacidade falsa**
 64 GB e tem 8) só é detectável antes de gravar, com o cartão num leitor USB:
 `sudo lasdpc-sdcheck --destrutivo /dev/sdX` (apaga tudo; usa `f3probe`, poucos minutos).
 
+## Pen drive provisionador
+
+Para Pis "cruas" com cartões comprados em lote (inclusive falsos), sem Imager nem teclado:
+
+```sh
+sudo lasdpc-make-provisioner /dev/sdX     # APAGA o pen drive (>= 4 GB); telas perguntam os padrões
+```
+
+Ele pergunta usuário/senha das Pis (guarda só o hash), Wi-Fi, chave SSH, apps, chave do Spotify
+(`procurar` = copiar de uma estação da rede), canal e prefixo do nome, e grava um Raspberry Pi
+OS Lite mínimo no pen drive. Os padrões ficam em `bootfs/lasdpc/provision.conf` (editável em
+qualquer computador).
+
+Em cada Pi: **cartão vazio no slot + cabo de rede + pen drive**, ligue. A Pi tenta o cartão,
+não acha sistema e inicia pelo pen drive (na 1ª vez ele se prepara, ~2 min). Na TV:
+
+1. **Teste destrutivo** do cartão (`lasdpc-sdcheck --destrutivo`: f3probe + velocidade).
+   - capacidade real = declarada → **APROVADO**;
+   - **falso** com ≥ `MIN_REAL_GB` (12) GB reais → **aprovado com ressalva**: o sistema é limitado
+     à parte real (raiz esticada até o último setor real, partição "tampão" tipo `da` sobre o
+     resto e `resize` removido do `cmdline.txt`, para nada gravar onde o cartão não tem memória);
+   - falso pequeno, setores ruins ou lento demais → **REPROVADO** (troque o cartão; testa o próximo).
+2. Baixa o Raspberry Pi OS (64-bit, desktop) **da internet** direto para o cartão, conferindo o sha256.
+3. Escreve o 1º boot (cloud-init): usuário do lab, rede, SSH, nome `tv-lab-<serial>` e um
+   serviço que instala o `lasdpc.deb` com as respostas do pen drive.
+4. Reinicia: a Pi liga pelo cartão e instala a estação sozinha (log: `/var/log/lasdpc-firstboot.log`).
+   **Pode tirar o pen drive** já na mensagem "PRONTO" e usar na próxima Pi.
+
+Nada das Pis fica no pen drive: imagem e estação vêm sempre da rede. Log do último cartão:
+`bootfs/lasdpc/ultimo-provisionamento.log`.
+
 ### Publicar o pacote
 
 `packaging/publish-apt.sh --push` gera o `.deb`, o repositório APT assinado (chave

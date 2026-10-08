@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-make-provisioner /dev/sdX — cria o pen drive provisionador (APAGA o pen drive).
+#
+# Pergunta (em telas) os padroes do lab: usuario/senha das Pis, Wi-Fi, chave SSH,
+# apps, canal e prefixo do nome. Grava um Raspberry Pi OS Lite minimo (~0,5 GB) no
+# pen drive com o provisionador, que roda sozinho na tela ao iniciar:
+#   testa o cartao (destrutivo) -> baixa e grava o Raspberry Pi OS -> configura o
+#   1o boot (usuario, rede, SSH, estacao) -> reinicia no cartao.
+# O sistema das Pis vem sempre da internet (nada ocupa o pen drive).
+# Ver docs/fleet.md#pen-drive-provisionador.
+# ============================================================
+set -euo pipefail
+[ "$(id -u)" = 0 ] || { echo "rode com sudo"; exit 1; }
+DEV="${1:-}"
+SRC="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+[ -f "$SRC/provision.sh" ] || SRC=/opt/lasdpc-pi-station/repo/provisioner
+LITE_URL="https://downloads.raspberrypi.com/raspios_lite_arm64_latest"
+T="LASDPC — pen drive provisionador"
+
+if [ -z "$DEV" ]; then
+  echo "uso: sudo lasdpc-make-provisioner /dev/sdX"; echo; echo "discos USB conectados:"
+  lsblk -dno NAME,SIZE,TRAN,MODEL | awk '$3=="usb"{print "  /dev/"$0}'; exit 2
+fi
+if [ -b "$DEV" ]; then
+  [ "$(lsblk -dno TRAN "$DEV")" = usb ] || { echo "$DEV nao e um disco USB; recusado por seguranca"; exit 2; }
+  root_disk="/dev/$(lsblk -no PKNAME "$(findmnt -no SOURCE /)")"
+  [ "$DEV" != "$root_disk" ] || { echo "$DEV e o disco do sistema!"; exit 2; }
+fi
+command -v whiptail >/dev/null || apt-get install -y whiptail
+
+ask()  { whiptail --title "$T" "$@" 3>&1 1>&2 2>&3; }
+# Respostas prontas (automacao/teste): LASDPC_PROVISION_ANSWERS=arquivo com as
+# variaveis LAB_USER, LAB_PASSWORD, WIFI_SSID, WIFI_PSK, SSH_KEY, APPS, SPOT, CHANNEL, PREFIX
+if [ -n "${LASDPC_PROVISION_ANSWERS:-}" ]; then
+  . "$LASDPC_PROVISION_ANSWERS"
+  HASH="$(printf '%s' "$LAB_PASSWORD" | openssl passwd -6 -stdin)"; unset LAB_PASSWORD
+else
+LAB_USER="$(ask --inputbox "Usuário que será criado em todas as Pis:" 9 70 lab)"
+while :; do
+  P1="$(ask --passwordbox "Senha desse usuário (anote! vale para todas as Pis):" 9 70)"
+  P2="$(ask --passwordbox "Repita a senha:" 9 70)"
+  [ -n "$P1" ] && [ "$P1" = "$P2" ] && break
+  whiptail --title "$T" --msgbox "As senhas não conferem ou estão vazias." 8 50
+done
+HASH="$(printf '%s' "$P1" | openssl passwd -6 -stdin)"; unset P1 P2
+WIFI_SSID="$(ask --inputbox "Wi-Fi das Pis (deixe vazio para usar só cabo):" 9 70 "")"
+WIFI_PSK=""; [ -n "$WIFI_SSID" ] && WIFI_PSK="$(ask --passwordbox "Senha do Wi-Fi $WIFI_SSID:" 9 70)"
+KEYFILE="$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6)/.ssh/id_ed25519.pub"
+SSH_KEY="$(cat "$KEYFILE" 2>/dev/null || true)"
+SSH_KEY="$(ask --inputbox "Chave SSH pública para acessar as Pis sem senha (opcional):" 10 78 "$SSH_KEY")"
+APPS="$(ask --checklist "Apps instalados nas Pis (espaço marca):" 16 76 6 \
+  youtube "YouTube de TV sem anúncios" ON \
+  spotify "Spotify (TV LASDPC)" ON \
+  games "Jogos (1a instalação compila ~30 min)" OFF \
+  airplay "Espelhar iPhone/Mac" OFF \
+  kodi "Central de mídia" OFF | tr -d '"')"
+SPOT="depois"
+if echo " $APPS " | grep -q " spotify "; then
+  SPOT="$(ask --menu "Chave do Spotify nas Pis novas:" 12 78 2 \
+    procurar "copiar de uma estação da rede (aprovar na TV dela ou 'Permitir compartilhar')" \
+    depois "configurar depois (menu > Ajustes > Spotify)")"
+fi
+CHANNEL="$(ask --menu "Canal de atualização:" 11 70 2 stable "versões promovidas (recomendado)" main "toda mudança (Pis de teste)")"
+PREFIX="$(ask --inputbox "Prefixo do nome (o final vem do número de série da Pi):" 9 70 tv-lab-)"
+fi
+[ -n "${LASDPC_PROVISION_ANSWERS:-}" ] || whiptail --title "$T" --yesno "TUDO em $DEV ($(lsblk -dno SIZE,MODEL "$DEV" 2>/dev/null)) será APAGADO.\n\nContinuar?" 10 70 || exit 1
+
+# ---- Raspberry Pi OS Lite no pen drive (direto da internet, conferido)
+url="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "$LITE_URL")"
+sum="$(curl -fsSL "$url.sha256" | awk '{print $1}')"
+echo "Gravando $(basename "$url") em $DEV..."
+[ -b "$DEV" ] && { umount "$DEV"?* 2>/dev/null || true; }
+curl -fL --progress-bar "$url" | tee >(sha256sum | awk '{print $1}' > /tmp/lasdpc-lite.sum) \
+  | xz -dc | dd of="$DEV" bs=4M iflag=fullblock conv=fsync status=none
+sleep 2
+[ "$(cat /tmp/lasdpc-lite.sum)" = "$sum" ] || { echo "ERRO: download corrompido (sha256)"; exit 1; }
+
+# ---- provisionador na particao de boot (FAT: editavel em qualquer computador)
+MNT="$(mktemp -d)"
+if [ -b "$DEV" ]; then
+  partprobe "$DEV"; udevadm settle; p1="$(lsblk -lnpo NAME "$DEV" | sed -n 2p)"; mount "$p1" "$MNT"
+else
+  mount -o loop,offset=$(( $(sfdisk -d "$DEV" | awk -F'[=,]' '/start=/{print $2+0; exit}') * 512 )) "$DEV" "$MNT"
+fi
+install -d "$MNT/lasdpc"
+install -m 0755 "$SRC/provision.sh" "$MNT/lasdpc/provision.sh"
+install -m 0755 "$SRC/../remote/bin/lasdpc-sdcheck" "$MNT/lasdpc/lasdpc-sdcheck" 2>/dev/null \
+  || install -m 0755 /usr/local/bin/lasdpc-sdcheck "$MNT/lasdpc/lasdpc-sdcheck"
+cat > "$MNT/lasdpc/provision.conf" <<CONF
+# Padroes do lab para as Pis provisionadas por este pen drive.
+# Editavel em qualquer computador (particao "bootfs", pasta lasdpc).
+LAB_USER='$LAB_USER'
+LAB_PASS_HASH='$HASH'
+WIFI_SSID='$WIFI_SSID'
+WIFI_PSK='$WIFI_PSK'
+WIFI_COUNTRY='BR'
+SSH_KEY='$SSH_KEY'
+APPS='$APPS'
+SPOTIFY_KEY_MODE='$SPOT'
+CHANNEL='$CHANNEL'
+NAME_PREFIX='$PREFIX'
+MIN_REAL_GB='12'   # cartao falso serve se tiver pelo menos isso de capacidade real
+TIMEZONE='America/Sao_Paulo'
+KEYBOARD='br'
+CONF
+
+# o proprio pen drive: no 1o boot cria um usuario travado (sem tela de "crie um
+# usuario"), instala as ferramentas e liga o provisionador na tela (tty1)
+cat > "$MNT/user-data" <<'EOF'
+#cloud-config
+hostname: lasdpc-provisionador
+users:
+- name: provisionador
+  lock_passwd: true
+  groups: sudo
+packages:
+- f3
+- fio
+- xz-utils
+write_files:
+- path: /etc/systemd/system/lasdpc-provision.service
+  content: |
+    [Unit]
+    Description=LASDPC provisionador (testa e grava cartoes SD)
+    After=network-online.target cloud-final.service
+    Wants=network-online.target
+    Conflicts=getty@tty1.service
+    [Service]
+    Type=oneshot
+    ExecStart=/bin/bash /boot/firmware/lasdpc/provision.sh
+    StandardInput=tty
+    StandardOutput=tty
+    TTYPath=/dev/tty1
+    TTYReset=yes
+    TTYVHangup=yes
+    [Install]
+    WantedBy=multi-user.target
+runcmd:
+- [systemctl, daemon-reload]
+- [systemctl, enable, lasdpc-provision.service]
+- [systemctl, start, --no-block, lasdpc-provision.service]
+EOF
+cat > "$MNT/network-config" <<'EOF'
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      optional: false
+EOF
+printf 'dsmode: local\ninstance_id: lasdpc-provisionador\n' > "$MNT/meta-data"
+sync; umount "$MNT"; rmdir "$MNT"
+[ -n "${LASDPC_PROVISION_ANSWERS:-}" ] && { echo "pen drive pronto: $DEV"; exit 0; }
+whiptail --title "$T" --msgbox "Pen drive pronto!\n\nNuma Pi: cartão novo no slot + cabo de rede + pen drive, ligue.\nNa 1ª vez o pen drive se prepara (~2 min) e depois mostra o provisionador.\n\nSenha das Pis: a que você definiu (usuário $LAB_USER)." 13 74

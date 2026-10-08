@@ -69,9 +69,12 @@ speed_tests() {  # speed_tests <alvo> <tamanho> <min leitura 4K> <min escrita 4K
   ge "$rw" "$minw" && ok "escrita 4K >= $minw IOPS ($ref)" || { ge "$rw" 60 && slow "escrita 4K abaixo de $minw IOPS ($ref): atualizacoes e saves ficam lentos" || bad "escrita 4K muito baixa ($rw IOPS): o sistema vai engasgar o tempo todo"; }
 }
 
-identity() {  # identity <bloco: mmcblk0 | sdX>
-  local d="/sys/block/$1/device" mid name date size m
-  size=$(( $(cat "/sys/block/$1/size") * 512 / 1000000000 ))
+identity() {  # identity <bloco: mmcblk0 | sdX | /dev/mapper/...>
+  local b mid name date size m sectors
+  b="$(basename "$(readlink -f "/dev/${1#/dev/}" 2>/dev/null || echo "$1")")"   # ex.: mapper -> dm-0
+  local d="/sys/block/$b/device"
+  sectors="$(cat "/sys/block/$b/size" 2>/dev/null || echo 0)"
+  size=$(( ${sectors:-0} * 512 / 1000000000 ))
   mid=$(cat "$d/manfid" 2>/dev/null || true); name=$(cat "$d/name" 2>/dev/null || cat "$d/model" 2>/dev/null || true)
   date=$(cat "$d/date" 2>/dev/null || true); m=$(manuf "$mid")
   echo "  cartao: ${B}${name:-?}${N} • ${size} GB declarados • fabricado ${date:-?} • fabricante ${mid:-?} ${m:+($m)}"
@@ -82,6 +85,7 @@ identity() {  # identity <bloco: mmcblk0 | sdX>
 
 # ---------------------------------------------------------------- destrutivo
 if [ "${1:-}" = "--destrutivo" ]; then
+  DESTRUTIVO=1; F3_OK=0
   dev="${2:-}"
   [ -b "$dev" ] || { echo "uso: sudo lasdpc-sdcheck --destrutivo /dev/sdX"; exit 2; }
   [ "$(id -u)" = 0 ] || { echo "rode com sudo"; exit 2; }
@@ -93,11 +97,22 @@ if [ "${1:-}" = "--destrutivo" ]; then
   if [ "${LASDPC_SDCHECK_YES:-}" != 1 ]; then
     read -r -p "Digite o nome do dispositivo para confirmar ($dev): " c; [ "$c" = "$dev" ] || { echo "cancelado"; exit 2; }
   fi
-  echo "${B}1. Identidade${N}"; identity "$(basename "$dev")"
+  echo "${B}1. Identidade${N}"; identity "$dev"
   echo "${B}2. Capacidade real e setores (f3probe)${N}"
   out="$(f3probe --destructive --time-ops "$dev" 2>&1)"; echo "$out" | sed -n '/^Good news\|^Bad news\|Device geometry\|Usable size\|Announced size\|Average/p' | sed 's/^/  /'
-  if echo "$out" | grep -q '^Good news'; then ok "capacidade real confere com a declarada"
-  else bad "cartao FALSO ou defeituoso (capacidade real menor que a declarada / setores ruins)"; fi
+  last="$(echo "$out" | sed -n 's/.*--last-sec=\([0-9]\+\).*/\1/p' | head -1)"
+  if echo "$out" | grep -q '^Good news'; then ok "capacidade real confere com a declarada"; F3_OK=1
+  elif [ -n "$last" ]; then
+    # cartao falso/limitado: serve se a parte real for grande o bastante; a instalacao
+    # (provisionador) usa so ate o ultimo setor real e tranca o resto
+    real_gb=$(( (last + 1) * 512 / 1000000000 ))
+    if [ "$real_gb" -ge "${LASDPC_MIN_REAL_GB:-12}" ]; then
+      slow "cartao FALSO: so ${real_gb} GB reais (dos declarados) — usavel, limitado aos ${real_gb} GB"
+      echo "LASDPC_ULTIMO_SETOR_REAL=$last"; F3_OK=1
+    else
+      bad "cartao FALSO com so ${real_gb} GB reais: a estacao precisa de >= ${LASDPC_MIN_REAL_GB:-12} GB"
+    fi
+  else bad "cartao defeituoso (f3probe nao conseguiu medir a capacidade real)"; fi
   echo "${B}3. Velocidade (dispositivo cru)${N}"; speed_tests "$dev" 512M 1500 500 "A1"
 else
 # ---------------------------------------------------------------- em uso
@@ -119,6 +134,10 @@ else
   [ "$free" -ge 6 ] && ok "${free} GB livres" || bad "so ${free} GB livres; a estacao precisa de >= 6 GB (cartao de 16 GB ou mais)"
 fi
 
+# falha segura: no modo destrutivo, sem veredito do f3probe o cartao NAO passa
+if [ "${DESTRUTIVO:-0}" = 1 ] && [ "${F3_OK:-0}" != 1 ] && [ $verdict -lt 2 ]; then
+  bad "teste de capacidade nao chegou a um resultado: cartao nao aprovado"
+fi
 echo
 case $verdict in
   0) echo "${G}${B}APROVADO${N}: cartao bom para a estacao." ;;
