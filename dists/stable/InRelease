@@ -4,34 +4,34 @@ Hash: SHA256
 Architectures: arm64 all
 Codename: stable
 Components: main
-Date: Thu, 08 Oct 2026 01:18:46 +0000
+Date: Thu, 08 Oct 2026 02:05:30 +0000
 Label: LASDPC Station
 Origin: LASDPC
 Suite: stable
 MD5Sum:
- ed73273d8aabb51543b661126591019f             3371 main/binary-all/Packages
- a09a138ba114af4261f2de44bb9938f2             1185 main/binary-all/Packages.gz
- ed73273d8aabb51543b661126591019f             3371 main/binary-arm64/Packages
- a09a138ba114af4261f2de44bb9938f2             1185 main/binary-arm64/Packages.gz
+ 8378e178a720c5770a5b8c578d67d77b             4511 main/binary-all/Packages
+ c4dc553ec10568327da24d63cc6e2001             1379 main/binary-all/Packages.gz
+ 8378e178a720c5770a5b8c578d67d77b             4511 main/binary-arm64/Packages
+ c4dc553ec10568327da24d63cc6e2001             1379 main/binary-arm64/Packages.gz
 SHA1:
- 40125c2549753ead2279a1bbcae79bcb6fb61646             3371 main/binary-all/Packages
- 160c5f1a363900005f91c0c351fbb13c979b62e9             1185 main/binary-all/Packages.gz
- 40125c2549753ead2279a1bbcae79bcb6fb61646             3371 main/binary-arm64/Packages
- 160c5f1a363900005f91c0c351fbb13c979b62e9             1185 main/binary-arm64/Packages.gz
+ caff37bd2373a60ea6d2787d78d3ade8eb8c1137             4511 main/binary-all/Packages
+ 4e3302a8314a4b8da4d7bd8d57cd4e6c3440b64c             1379 main/binary-all/Packages.gz
+ caff37bd2373a60ea6d2787d78d3ade8eb8c1137             4511 main/binary-arm64/Packages
+ 4e3302a8314a4b8da4d7bd8d57cd4e6c3440b64c             1379 main/binary-arm64/Packages.gz
 SHA256:
- 8a56144a95c09dfb62bb60c40d4d8dad79ef731620328b6d2fadef09a107d7f1             3371 main/binary-all/Packages
- d2dc8aace484116236894b9b960cd6c90d04e3797a198fcd26551901b8afeaa1             1185 main/binary-all/Packages.gz
- 8a56144a95c09dfb62bb60c40d4d8dad79ef731620328b6d2fadef09a107d7f1             3371 main/binary-arm64/Packages
- d2dc8aace484116236894b9b960cd6c90d04e3797a198fcd26551901b8afeaa1             1185 main/binary-arm64/Packages.gz
+ fd9b5bcf063639899973f5f1adf2633ff4e9d8324b58e5ce2dd1e5367bc4cdce             4511 main/binary-all/Packages
+ 069dfb293424c8b3a4d70cf559aed1d8661abdd1f8deeb4dcecd44c1898ca6a6             1379 main/binary-all/Packages.gz
+ fd9b5bcf063639899973f5f1adf2633ff4e9d8324b58e5ce2dd1e5367bc4cdce             4511 main/binary-arm64/Packages
+ 069dfb293424c8b3a4d70cf559aed1d8661abdd1f8deeb4dcecd44c1898ca6a6             1379 main/binary-arm64/Packages.gz
 SHA512:
- fb774509c6653f311cd90c60a5ed5afbe782bc5345b15bb9c1f5f7a32e3020126d6a6e1a5d7507896a1ff2f5b2061f1e3f11bf2097496ff25fe4b60678aa05e4             3371 main/binary-all/Packages
- 4905d59d38955c95897db26e2e2765c6329f08edce4b789f492f40e39d87dc0f28b6f63ab514d6de1bbcf5420c0e08725c94f77f2522a0575ca09ac0a8ade193             1185 main/binary-all/Packages.gz
- fb774509c6653f311cd90c60a5ed5afbe782bc5345b15bb9c1f5f7a32e3020126d6a6e1a5d7507896a1ff2f5b2061f1e3f11bf2097496ff25fe4b60678aa05e4             3371 main/binary-arm64/Packages
- 4905d59d38955c95897db26e2e2765c6329f08edce4b789f492f40e39d87dc0f28b6f63ab514d6de1bbcf5420c0e08725c94f77f2522a0575ca09ac0a8ade193             1185 main/binary-arm64/Packages.gz
+ 636ce1efc879d7c3f66cee8fc07e7f7f78997dcde768632144ab830d381f0f6dd77ce3ace3ec2ac7f7380138b8edd01ad0191f913ca60e5d6ae5d5c5ebd140ba             4511 main/binary-all/Packages
+ 9c6b6fb5f738f387f6ce6cf87f6eeff7fab29a36cd88f43b2c5530ea27c1a6988298caec3d63067193b91458f7e912b53112b40ea8bb23161f6858a9acf49540             1379 main/binary-all/Packages.gz
+ 636ce1efc879d7c3f66cee8fc07e7f7f78997dcde768632144ab830d381f0f6dd77ce3ace3ec2ac7f7380138b8edd01ad0191f913ca60e5d6ae5d5c5ebd140ba             4511 main/binary-arm64/Packages
+ 9c6b6fb5f738f387f6ce6cf87f6eeff7fab29a36cd88f43b2c5530ea27c1a6988298caec3d63067193b91458f7e912b53112b40ea8bb23161f6858a9acf49540             1379 main/binary-arm64/Packages.gz
 -----BEGIN PGP SIGNATURE-----
 
-iIsEARYIADMWIQQIUPQyAHKmYG04NpVMGU8m3A/RAwUCasbvdhUccGVkcm9ndWRp
-bkBnbWFpbC5jb20ACgkQTBlPJtwP0QMKjwD9HmMKbmGDpZ8iUAiFuNaCFVUnb3h+
-Fa5yQhS4LXkGTvsBALtAaS90UNQTSkwfU6auRCGBUOnaSAKb4DO+JUQD/iAK
-=apyK
+iIsEARYIADMWIQQIUPQyAHKmYG04NpVMGU8m3A/RAwUCasb6ahUccGVkcm9ndWRp
+bkBnbWFpbC5jb20ACgkQTBlPJtwP0QP/+AD/br+bVhx51F8wibCz4sFnG01BI5p9
+wbn21T0aFmhoz1YA/AohdgQ+L9On/QcfYmAvSoZ4wn4J4AlosAKjXad6ojsF
+=XMmG
 -----END PGP SIGNATURE-----
