@@ -1,0 +1,110 @@
+#!/usr/bin/env python3
+"""lasdpc-frota — comandos para todas as estacoes da rede de uma vez (em paralelo).
+
+  lasdpc-frota status                      lista as estacoes: versao, apps, temperatura
+  lasdpc-frota apps +youtube -games        liga/desliga apps em todas
+  lasdpc-frota atualizar                   busca a versao nova do canal agora (sem esperar a madrugada)
+  ... [ESTACAO|IP ...]                     so nessas (nome, ex.: tv-lab-0620, ou IP)
+
+Acha as estacoes pelo mDNS (_lasdpc._tcp) e entra por SSH com a sua chave (a que o pen
+drive provisionador instalou). Usuario SSH: o anunciado pela estacao, ou LASDPC_FROTA_USER.
+Saida completa de cada Pi: ~/.cache/lasdpc-frota/<estacao>.log
+"""
+import concurrent.futures as cf, os, re, subprocess, sys, time
+
+sys.path.insert(0, "/opt/lasdpc-pi-station/launcher")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "launcher"))
+from keyshare import discover  # noqa: E402
+
+LOGDIR = os.path.expanduser("~/.cache/lasdpc-frota")
+G, R, Y, B, N = ("\033[32m", "\033[31m", "\033[33m", "\033[1m", "\033[0m") if sys.stdout.isatty() else ("",) * 5
+TIMEOUT = {"status": 30, "apps": 3 * 3600, "atualizar": 3 * 3600}
+
+
+def ssh(st, args):
+    user = os.environ.get("LASDPC_FROTA_USER") or st.get("user") or "lab"
+    cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=6", "-o", "StrictHostKeyChecking=accept-new",
+           f"{user}@{st['ip']}", "sudo", "-n", "/usr/local/bin/lasdpc-ctl", *args]
+    t0 = time.time()
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=TIMEOUT[args[0]])
+        out, rc = (p.stdout + p.stderr).strip(), p.returncode
+    except subprocess.TimeoutExpired:
+        out, rc = "sem resposta (tempo esgotado)", 124
+    os.makedirs(LOGDIR, exist_ok=True)
+    with open(os.path.join(LOGDIR, f"{st['station']}.log"), "w") as f:
+        f.write(f"$ {' '.join(cmd)}\n{out}\n(rc={rc})\n")
+    return rc, out, time.time() - t0
+
+
+def why(rc, out):
+    if "REMOTE HOST IDENTIFICATION HAS CHANGED" in out:
+        return "Pi reinstalada (chave do host mudou): ssh-keygen -R <ip> e rode de novo"
+    if rc == 255:
+        if "Permission denied" in out:
+            return "SSH recusou a sua chave (Pi nao foi feita pelo pen drive? LASDPC_FROTA_USER?)"
+        return "sem conexao SSH (desligada ou fora da rede)"
+    if "a password is required" in out or "sudo:" in out:
+        return "sudo pede senha nessa Pi (rode nela: sudo lasdpc-apply, que libera o lasdpc-ctl)"
+    lines = [l for l in out.splitlines() if l.strip()]
+    return lines[-1][:110] if lines else f"erro {rc}"
+
+
+def main(argv):
+    if len(argv) < 2 or argv[1] not in TIMEOUT:
+        print(__doc__.strip()); return 2
+    cmd = argv[1]
+    if cmd == "apps":
+        changes = [a for a in argv[2:] if a[:1] in "+-"]
+        only = [a for a in argv[2:] if a[:1] not in "+-"]
+        if not changes:
+            print("uso: lasdpc-frota apps +app -app [estacao ...]"); return 2
+        args = ["apps", *changes]
+    else:
+        only, args = argv[2:], [cmd]
+
+    found = discover(timeout=8)
+    if only:
+        sts = []
+        for o in only:
+            m = [s for s in found if o in (s["station"], s["ip"], s["host"], s["host"].split(".")[0])]
+            sts += m or ([{"station": o, "ip": o, "host": o}] if re.match(r"^\d+\.\d+\.\d+\.\d+$", o) else [])
+            if not m and not re.match(r"^\d+\.\d+\.\d+\.\d+$", o):
+                print(f"{R}✖ {o}: nao encontrada na rede{N}")
+    else:
+        sts = found
+    if not sts:
+        print("nenhuma estacao encontrada na rede (elas anunciam _lasdpc._tcp pelo avahi)"); return 1
+
+    print(f"{B}{' '.join(args)}{N} em {len(sts)} estacao(oes): {', '.join(s['station'] for s in sts)}")
+    if cmd != "status":
+        print("(instalar apps pode levar varios minutos; o resultado de cada Pi aparece quando ela termina)")
+    fails = 0
+    with cf.ThreadPoolExecutor(max_workers=32) as ex:
+        futs = {ex.submit(ssh, s, args): s for s in sts}
+        rows = []
+        for fu in cf.as_completed(futs):
+            s = futs[fu]; rc, out, dt = fu.result()
+            if cmd == "status" and rc == 0:
+                kv = dict(l.split("=", 1) for l in out.splitlines() if "=" in l)
+                rows.append((kv.get("nome") or s["station"], s["ip"], kv))
+                continue
+            if rc == 0:
+                msg = next((l for l in out.splitlines() if l.startswith("apps:")), None) or why(rc, out)
+                print(f"{G}✔ {s['station']:16}{N} {msg}  ({dt:.0f} s)")
+            else:
+                fails += 1
+                print(f"{R}✖ {s['station']:16}{N} {why(rc, out)}")
+        for name, ip, kv in sorted(rows):
+            t = int(kv.get("temp", "0") or 0)
+            tc = R if t >= 80 else Y if t >= 70 else ""
+            print(f"{G}●{N} {name:16} {ip:15} {kv.get('versao', '?'):18} {kv.get('canal', ''):7} "
+                  f"{tc}{t:>3}°C{N}  carga {kv.get('carga', '?'):5} atualiz. {kv.get('atualizacao', '-'):11} "
+                  f"apps: {kv.get('apps') or '-'}")
+    if fails:
+        print(f"\n{fails} com problema; detalhes em {LOGDIR}/<estacao>.log")
+    return 1 if fails else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

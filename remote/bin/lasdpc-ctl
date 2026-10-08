@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# ============================================================
+# lasdpc-ctl — controle desta estacao (usado pelo lasdpc-frota via SSH; roda como root)
+#   lasdpc-ctl status              nome, versao, canal, apps, temperatura (chave=valor)
+#   lasdpc-ctl apps +youtube -games   liga/desliga apps opcionais e aplica
+#   lasdpc-ctl atualizar           busca a versao nova do canal agora (lasdpc-update)
+# ============================================================
+set -uo pipefail
+[ "$(id -u)" = 0 ] || exec sudo -n "$0" "$@"
+CONF=/etc/lasdpc/station.conf
+REPO=/opt/lasdpc-pi-station/repo
+conf() { ( . "$CONF" 2>/dev/null; eval "printf '%s' \"\${$1:-}\"" ); }
+setkey() {  # setkey CHAVE valor (mesmo formato do postinst)
+  if grep -q "^$1=" "$CONF"; then sed -i "s|^$1=.*|$1=\"$2\"|" "$CONF"; else echo "$1=\"$2\"" >> "$CONF"; fi
+}
+
+case "${1:-}" in
+  status)
+    t="$(cat /sys/class/thermal/thermal_zone0/temp 2>/dev/null || echo 0)"
+    echo "nome=$(conf STATION_NAME)"
+    echo "versao=$(git -C "$REPO" log -1 --format='%h %cs' 2>/dev/null || echo '?')"
+    echo "canal=$(conf CHANNEL)"
+    echo "apps=$(conf APPS)"
+    echo "temp=$(( t / 1000 ))"
+    echo "carga=$(cut -d' ' -f1 /proc/loadavg)"
+    echo "atualizacao=$(python3 -c 'import json; print(json.load(open("/var/lib/lasdpc/update.json"))["result"])' 2>/dev/null || echo '-')"
+    ;;
+  apps)
+    shift; [ $# -gt 0 ] || { echo "uso: lasdpc-ctl apps +app -app ..."; exit 2; }
+    cur=" $(conf APPS) "
+    for a in "$@"; do
+      id="${a#[+-]}"
+      req="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1])).get("required", False))' \
+             "$REPO/apps/$id/app.json" 2>/dev/null)" || { echo "app desconhecido: $id"; exit 2; }
+      [ "$req" = True ] && { echo "$id e obrigatorio (sempre ligado)"; continue; }
+      cur="${cur// $id / }"
+      case "$a" in -*) ;; *) cur="$cur$id " ;; esac
+    done
+    new="$(echo $cur)"
+    # nao roda junto com a atualizacao da madrugada
+    exec 9>/run/lasdpc-update.lock; flock -w 3600 9 || { echo "atualizacao em andamento ha mais de 1 h"; exit 1; }
+    setkey APPS "$new"
+    echo "lasdpc-station lasdpc-station/apps multiselect ${new// /, }" | debconf-set-selections 2>/dev/null || true
+    echo "apps: ${new:-nenhum opcional}"
+    "$REPO/station/bin/lasdpc-apply" --repo "$REPO" > /var/log/lasdpc-ctl-apply.log 2>&1; rc=$?
+    tail -n 3 /var/log/lasdpc-ctl-apply.log
+    exit $rc
+    ;;
+  atualizar)
+    lasdpc-update 2>&1 | grep -E '^\[lasdpc-update\]|^outra' | tail -n 3; exit "${PIPESTATUS[0]}"
+    ;;
+  *) sed -n '3,6p' "$0"; exit 2 ;;
+esac

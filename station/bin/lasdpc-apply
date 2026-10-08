@@ -32,14 +32,14 @@ apt_ensure chromium mpv python3 python3-pil python3-cryptography inotify-tools g
 session_changed=0
 install_file "$REPO/remote/bin/lasdpc-session" /usr/local/bin/lasdpc-session 0755 && session_changed=1
 install_bin lasdpc-apps lasdpc-mode lasdpc-kiosk lasdpc-loading lasdpc-restart-kiosk lasdpc-status \
-  lasdpc-soloist-key lasdpc-sdcheck
+  lasdpc-soloist-key lasdpc-sdcheck lasdpc-ctl lasdpc-frota
 # cria o pen drive provisionador (link: usa provision.sh do mesmo checkout)
 ln -sfn "$REPO/provisioner/lasdpc-make-provisioner" /usr/local/bin/lasdpc-make-provisioner
 
 # o menu (servidor do usuario da sessao) usa sudo so para estes comandos
 cat > /tmp/lasdpc-sudoers <<SUDO
 # LASDPC Station: comandos que o menu central roda como root
-$SESSION_USER ALL=(root) NOPASSWD: /usr/local/bin/lasdpc-soloist-key, /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff, /usr/bin/docker ps *
+$SESSION_USER ALL=(root) NOPASSWD: /usr/local/bin/lasdpc-soloist-key, /usr/local/bin/lasdpc-ctl, /usr/bin/systemctl reboot, /usr/bin/systemctl poweroff, /usr/bin/docker ps *
 SUDO
 if visudo -cqf /tmp/lasdpc-sudoers; then install -m 0440 /tmp/lasdpc-sudoers /etc/sudoers.d/lasdpc-station; fi
 # anuncio mDNS da estacao (outras Pis acham quem tem a chave do Spotify)

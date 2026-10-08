@@ -12,8 +12,9 @@ ENV=/etc/lasdpc/soloist.env
 [ "$(id -u)" = 0 ] || { echo "rode como root" >&2; exit 1; }
 
 advertise() {  # TXT do anuncio mDNS da estacao (lasdpc-keyshare descobre por aqui)
-  local has="$1" name
+  local has="$1" name user
   name="$( . /etc/lasdpc/station.conf 2>/dev/null; echo "${STATION_NAME:-$(hostname)}")"
+  user="$( . /etc/lasdpc/station.conf 2>/dev/null; echo "${SESSION_USER:-$(id -nu 1000)}")"   # SSH do lasdpc-frota
   install -d /etc/avahi/services
   cat > /etc/avahi/services/lasdpc.service <<XML
 <?xml version="1.0" standalone='no'?>
@@ -25,6 +26,7 @@ advertise() {  # TXT do anuncio mDNS da estacao (lasdpc-keyshare descobre por aq
     <port>8091</port>
     <txt-record>station=$name</txt-record>
     <txt-record>spotify_key=$has</txt-record>
+    <txt-record>user=$user</txt-record>
   </service>
 </service-group>
 XML

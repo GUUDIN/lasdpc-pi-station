@@ -146,6 +146,23 @@ Estado da última atualização: `cat /var/lib/lasdpc/update.json` (`ok`, `rolle
 motivo, ou `failed`). Uma versão que falhou não é tentada de novo até sair outra
 (`sudo lasdpc-update --force` força). Saúde da estação: `sudo lasdpc-health`.
 
+## Comandos para a frota inteira (`lasdpc-frota`)
+
+De qualquer estação (ou PC com a chave SSH que o pen drive instalou), em paralelo em todas as
+estações da rede (achadas pelo mDNS):
+
+```sh
+lasdpc-frota status                       # nome, IP, versão, canal, temperatura, apps
+lasdpc-frota apps +youtube -games         # liga/desliga apps em todas e instala
+lasdpc-frota apps +airplay tv-lab-0620    # só nessa (nome ou IP; vários podem ser listados)
+lasdpc-frota atualizar                    # busca a versão nova do canal agora
+```
+
+Cada Pi aparece com ✔/✖ quando termina; a saída completa fica em
+`~/.cache/lasdpc-frota/<estação>.log`. Entra por SSH com o usuário anunciado pela estação
+(`LASDPC_FROTA_USER` muda) e roda `sudo lasdpc-ctl` lá (liberado sem senha só para esse
+comando). Numa Pi só, sem a frota: `sudo dpkg-reconfigure lasdpc-station`.
+
 ## O que fica em cada Pi (fora do repositório)
 
 | Caminho | Conteúdo |

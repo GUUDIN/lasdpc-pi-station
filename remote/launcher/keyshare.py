@@ -155,7 +155,8 @@ def discover(timeout=6):
         st = txt.get("station") or f[3]
         if st == me or f[7].startswith("127.") or f[7].startswith("172."):
             continue                       # a propria e IPs do Docker/loopback
-        found[st] = {"station": st, "host": f[6], "ip": f[7], "has_key": txt.get("spotify_key") == "yes"}
+        found[st] = {"station": st, "host": f[6], "ip": f[7], "has_key": txt.get("spotify_key") == "yes",
+                     "user": txt.get("user", "")}
     return sorted(found.values(), key=lambda s: (not s["has_key"], s["station"]))
 
 
