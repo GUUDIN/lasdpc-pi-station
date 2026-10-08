@@ -49,6 +49,9 @@ Ele pergunta usuário/senha das Pis (guarda só o hash), Wi-Fi, chave SSH, apps,
 OS Lite mínimo no pen drive. Os padrões ficam em `bootfs/lasdpc/provision.conf` (editável em
 qualquer computador).
 
+Cartão que já tem sistema (Pi com boot pelo USB primeiro): a TV avisa e ele é **apagado em 15 s**;
+qualquer tecla cancela.
+
 Em cada Pi: **cartão vazio no slot + cabo de rede + pen drive**, ligue. A Pi tenta o cartão,
 não acha sistema e inicia pelo pen drive (na 1ª vez ele se prepara, ~2 min). Na TV:
 

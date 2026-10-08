@@ -44,6 +44,19 @@ wait_card() {
   sleep 2
 }
 
+# cartao com sistema instalado (ex.: Pi com boot pelo USB primeiro): avisa e apaga
+# apos 15 s; qualquer tecla cancela. Cartao novo de loja (vazio ou so FAT) segue direto.
+confirm_if_installed() {
+  local fs k=""
+  if [ -b "$TARGET" ]; then fs="$(lsblk -lno FSTYPE,LABEL "$TARGET" 2>/dev/null)"
+  else fs="$(file -s "$TARGET" 2>/dev/null)"; fi
+  echo "$fs" | grep -qiE 'ext4|btrfs|rootfs|bootfs|ntfs' || return 0
+  big "$Y" "ESTE CARTAO JA TEM UM SISTEMA: sera APAGADO em 15 s."
+  say "Para cancelar, aperte qualquer tecla."
+  if read -r -s -n 1 -t 15 k 2>/dev/null; then return 1; fi
+  return 0
+}
+
 wait_swap() {   # espera tirar o cartao e por outro
   say ""; say "Retire este cartao. Para testar outro, insira o proximo."
   while [ -b "$TARGET" ]; do sleep 1; done
@@ -154,6 +167,9 @@ while true; do
   banner
   size=$(( $( [ -b "$TARGET" ] && blockdev --getsize64 "$TARGET" || stat -c %s "$TARGET") / 1000000000 ))
   say "Cartao detectado: $TARGET (${size} GB declarados)"
+  if [ "${FORCE:-0}" != 1 ] && ! confirm_if_installed; then
+    say "Cartao mantido intacto."; wait_swap; continue
+  fi
   say "Esperando a rede..."
   wait_net || { big "$R" "SEM INTERNET: ligue o cabo de rede e reinicie a Pi."; exit 1; }
   ensure_tools
