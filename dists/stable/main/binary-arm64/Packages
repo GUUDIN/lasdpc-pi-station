@@ -82,3 +82,24 @@ Description: LASDPC Station - estacao multimidia/IoT para Raspberry Pi
  estacao se atualiza sozinha a partir do repositorio (canal stable), com
  rollback automatico. Para mudar os apps depois: dpkg-reconfigure lasdpc-station.
 
+Package: lasdpc-station
+Architecture: all
+Version: 1.0.61
+Priority: optional
+Section: misc
+Maintainer: LASDPC <pedrogudin@gmail.com>
+Depends: debconf (>= 1.5), whiptail | dialog, git, ca-certificates, curl, fio, python3, python3-cryptography, avahi-daemon, avahi-utils
+Filename: pool/main/lasdpc-station_1.0.61_all.deb
+Size: 8368
+MD5sum: e3508d2ebc28af02bebe667b28d4daa9
+SHA1: fb73e8e74ef0d076bc98ea9e27da441645b17cee
+SHA256: 3bd0201da6e2eb481bb83776284d599ee274c99b8c94206c05487649a155cff7
+SHA512: 4c6604d135173142ff145a3a9267e66fc9d0e99e66f82af1c239472e032d772a0ff38bcefe4bd95c4902171b5ce70e4dd15f8c76b9061991fa189b55544a27b3
+Homepage: https://github.com/GUUDIN/lasdpc-pi-station
+Description: LASDPC Station - estacao multimidia/IoT para Raspberry Pi
+ Transforma um Raspberry Pi OS numa estacao de TV do laboratorio: menu central,
+ dashboard IoT e apps opcionais (YouTube, Spotify, jogos, AirPlay, Kodi).
+ Durante a instalacao pergunta quais apps instalar e verifica o cartao SD. A
+ estacao se atualiza sozinha a partir do repositorio (canal stable), com
+ rollback automatico. Para mudar os apps depois: dpkg-reconfigure lasdpc-station.
+
