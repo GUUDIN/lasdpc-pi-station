@@ -27,7 +27,22 @@ log "aplicando $(git -C "$REPO" describe --always --dirty 2>/dev/null || echo '?
 
 # ---------------------------------------------------------------- base
 apt_ensure chromium mpv python3 python3-pil python3-cryptography inotify-tools git curl rsync \
-  avahi-daemon avahi-utils libnotify-bin wireplumber
+  avahi-daemon avahi-utils libnotify-bin wireplumber fonts-noto-color-emoji
+
+# mouse/teclado sem fio travando: o usbhid do kernel da Pi consulta o mouse num intervalo
+# fixo; mousepoll=0 usa o do proprio dispositivo (1 ms nos receptores USB comuns)
+if ! grep -q 'usbhid.mousepoll=0' /boot/firmware/cmdline.txt 2>/dev/null && [ -f /boot/firmware/cmdline.txt ]; then
+  sed -i '1 s/[[:space:]]*$/ usbhid.mousepoll=0/' /boot/firmware/cmdline.txt
+  log "usbhid.mousepoll=0 no cmdline.txt"
+fi
+echo "options usbhid mousepoll=0" > /etc/modprobe.d/usbhid-mousepoll.conf
+if [ "$(cat /sys/module/usbhid/parameters/mousepoll 2>/dev/null)" != 0 ]; then
+  # vale ja, sem reiniciar: novo valor + reconectar os dispositivos HID USB
+  echo 0 > /sys/module/usbhid/parameters/mousepoll 2>/dev/null && for d in /sys/bus/usb/drivers/usbhid/*:*; do
+    i="$(basename "$d")"; echo "$i" > /sys/bus/usb/drivers/usbhid/unbind; echo "$i" > /sys/bus/usb/drivers/usbhid/bind
+  done 2>/dev/null
+  log "mouse/teclado: mousepoll=0 aplicado"
+fi
 
 session_changed=0
 install_file "$REPO/remote/bin/lasdpc-session" /usr/local/bin/lasdpc-session 0755 && session_changed=1
